@@ -126,7 +126,6 @@ frappe.listview_settings['Attendance'] = {
 			dialog.set_df_property("days_section", "hidden", 0);
 			dialog.set_df_property("status", "hidden", 0);
 			dialog.set_df_property("exclude_holidays", "hidden", 0);
-			dialog.set_df_property("unmarked_days", "options", []);
 			dialog.no_unmarked_days_left = false;
 			this.get_multi_select_options(
 				dialog.fields_dict.employee.value,
@@ -134,6 +133,7 @@ frappe.listview_settings['Attendance'] = {
 				dialog.fields_dict.end_date.value,
 				dialog.fields_dict.exclude_holidays.get_value()
 			).then(options => {
+				dialog.set_df_property("unmarked_days", "options", []);
 				if (options.length > 0) {
 					dialog.set_df_property("unmarked_days", "hidden", 0);
 					dialog.set_df_property("unmarked_days", "options", options);
