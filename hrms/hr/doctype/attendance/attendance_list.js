@@ -46,28 +46,7 @@ frappe.listview_settings['Attendance'] = {
 					fieldtype: "Date",
 					fieldname: "start_date",
 					reqd: 1,
-					onchange: function() {
-						if (dialog.fields_dict.employee.value && dialog.fields_dict.start_date.value && dialog.fields_dict.end_date.value) {
-							dialog.set_df_property("days_section", "hidden", 0);
-							dialog.set_df_property("status", "hidden", 0);
-							dialog.set_df_property("exclude_holidays", "hidden", 0);
-							dialog.set_df_property("unmarked_days", "options", []);
-							dialog.no_unmarked_days_left = false;
-							me.get_multi_select_options(
-								dialog.fields_dict.employee.value,
-								dialog.fields_dict.start_date.value,
-								dialog.fields_dict.end_date.value,
-								dialog.fields_dict.exclude_holidays.get_value()
-							).then(options => {
-								if (options.length > 0) {
-									dialog.set_df_property("unmarked_days", "hidden", 0);
-									dialog.set_df_property("unmarked_days", "options", options);
-								} else {
-									dialog.no_unmarked_days_left = true;
-								}
-							});
-						}
-					}
+					onchange: () => me.get_unmarked_days(dialog),
 				},
 				{
 					fieldtype: "Column Break",
@@ -78,28 +57,7 @@ frappe.listview_settings['Attendance'] = {
 					fieldtype: "Date",
 					fieldname: "end_date",
 					reqd: 1,
-					onchange: function() {
-						if (dialog.fields_dict.employee.value && dialog.fields_dict.start_date.value && dialog.fields_dict.end_date.value) {
-							dialog.set_df_property("days_section", "hidden", 0);
-							dialog.set_df_property("status", "hidden", 0);
-							dialog.set_df_property("exclude_holidays", "hidden", 0);
-							dialog.set_df_property("unmarked_days", "options", []);
-							dialog.no_unmarked_days_left = false;
-							me.get_multi_select_options(
-								dialog.fields_dict.employee.value,
-								dialog.fields_dict.start_date.value,
-								dialog.fields_dict.end_date.value,
-								dialog.fields_dict.exclude_holidays.get_value()
-							).then(options => {
-								if (options.length > 0) {
-									dialog.set_df_property("unmarked_days", "hidden", 0);
-									dialog.set_df_property("unmarked_days", "options", options);
-								} else {
-									dialog.no_unmarked_days_left = true;
-								}
-							});
-						}
-					}
+					onchange: () => me.get_unmarked_days(dialog),
 				},
 				{
 					fieldtype: "Section Break",
@@ -120,27 +78,7 @@ frappe.listview_settings['Attendance'] = {
 					fieldtype: "Check",
 					fieldname: "exclude_holidays",
 					hidden: 1,
-					onchange: function() {
-						if (dialog.fields_dict.employee.value && dialog.fields_dict.start_date.value && dialog.fields_dict.end_date.value) {
-							dialog.set_df_property("days_section", "hidden", 0);
-							dialog.set_df_property("status", "hidden", 0);
-							dialog.set_df_property("unmarked_days", "options", []);
-							dialog.no_unmarked_days_left = false;
-							me.get_multi_select_options(
-								dialog.fields_dict.employee.value,
-								dialog.fields_dict.start_date.value,
-								dialog.fields_dict.end_date.value,
-								dialog.fields_dict.exclude_holidays.get_value()
-							).then(options => {
-								if (options.length > 0) {
-									dialog.set_df_property("unmarked_days", "hidden", 0);
-									dialog.set_df_property("unmarked_days", "options", options);
-								} else {
-									dialog.no_unmarked_days_left = true;
-								}
-							});
-						}
-					}
+					onchange: () => me.get_unmarked_days(dialog),
 				},
 				{
 					label: __("Unmarked Attendance for days"),
@@ -181,6 +119,29 @@ frappe.listview_settings['Attendance'] = {
 			});
 			dialog.show();
 		});
+	},
+
+	get_unmarked_days: function(dialog) {
+		if (dialog.fields_dict.employee.value && dialog.fields_dict.start_date.value && dialog.fields_dict.end_date.value) {
+			dialog.set_df_property("days_section", "hidden", 0);
+			dialog.set_df_property("status", "hidden", 0);
+			dialog.set_df_property("exclude_holidays", "hidden", 0);
+			dialog.set_df_property("unmarked_days", "options", []);
+			dialog.no_unmarked_days_left = false;
+			this.get_multi_select_options(
+				dialog.fields_dict.employee.value,
+				dialog.fields_dict.start_date.value,
+				dialog.fields_dict.end_date.value,
+				dialog.fields_dict.exclude_holidays.get_value()
+			).then(options => {
+				if (options.length > 0) {
+					dialog.set_df_property("unmarked_days", "hidden", 0);
+					dialog.set_df_property("unmarked_days", "options", options);
+				} else {
+					dialog.no_unmarked_days_left = true;
+				}
+			});
+		}
 	},
 
 	get_multi_select_options: function(employee, start_date, end_date, exclude_holidays) {
