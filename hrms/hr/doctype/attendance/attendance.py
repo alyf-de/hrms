@@ -6,7 +6,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.query_builder import Criterion
-from frappe.utils import cint, cstr, formatdate, get_datetime, get_link_to_form, getdate, nowdate
+from frappe.utils import cint, cstr, formatdate, get_datetime, get_link_to_form, getdate, nowdate, add_days
 
 from hrms.hr.doctype.shift_assignment.shift_assignment import has_overlapping_timings
 from hrms.hr.utils import get_holiday_dates_for_employee, validate_active_employee
@@ -318,75 +318,42 @@ def mark_bulk_attendance(data):
 		attendance.submit()
 
 
-def get_month_map():
-	return frappe._dict(
-		{
-			"January": 1,
-			"February": 2,
-			"March": 3,
-			"April": 4,
-			"May": 5,
-			"June": 6,
-			"July": 7,
-			"August": 8,
-			"September": 9,
-			"October": 10,
-			"November": 11,
-			"December": 12,
-		}
-	)
-
-
 @frappe.whitelist()
-def get_unmarked_days(employee, month, exclude_holidays=0):
-	import calendar
-
-	month_map = get_month_map()
-	today = get_datetime()
-
+def get_unmarked_days(employee, start_date, end_date, exclude_holidays=0, include_today_and_future_days=0):
 	joining_date, relieving_date = frappe.get_cached_value(
 		"Employee", employee, ["date_of_joining", "relieving_date"]
 	)
-	start_day = 1
-	end_day = calendar.monthrange(today.year, month_map[month])[1] + 1
 
-	if joining_date and joining_date.year == today.year and joining_date.month == month_map[month]:
-		start_day = joining_date.day
+	start_date = max(getdate(start_date), joining_date or getdate(start_date))
+	end_date = min(getdate(end_date), relieving_date or getdate(end_date))
 
-	if (
-		relieving_date and relieving_date.year == today.year and relieving_date.month == month_map[month]
-	):
-		end_day = relieving_date.day + 1
-
-	dates_of_month = [
-		"{}-{}-{}".format(today.year, month_map[month], r) for r in range(start_day, end_day)
-	]
-	month_start, month_end = dates_of_month[0], dates_of_month[-1]
+	if not cint(include_today_and_future_days):
+		end_date = min(end_date, add_days(getdate(), -1))
 
 	records = frappe.get_all(
 		"Attendance",
 		fields=["attendance_date", "employee"],
 		filters=[
-			["attendance_date", ">=", month_start],
-			["attendance_date", "<=", month_end],
+			["attendance_date", ">=", start_date],
+			["attendance_date", "<=", end_date],
 			["employee", "=", employee],
 			["docstatus", "!=", 2],
 		],
 	)
 
-	marked_days = [get_datetime(record.attendance_date) for record in records]
+	marked_days = [getdate(record.attendance_date) for record in records]
+
 	if cint(exclude_holidays):
-		holiday_dates = get_holiday_dates_for_employee(employee, month_start, month_end)
-		holidays = [get_datetime(record) for record in holiday_dates]
+		holiday_dates = get_holiday_dates_for_employee(employee, start_date, end_date)
+		holidays = [getdate(record) for record in holiday_dates]
 		marked_days.extend(holidays)
 
 	unmarked_days = []
 
-	for date in dates_of_month:
-		date_time = get_datetime(date)
-		if today.day <= date_time.day and today.month <= date_time.month:
-			break
-		if date_time not in marked_days:
-			unmarked_days.append(date)
+	while start_date <= end_date:
+		if start_date not in marked_days:
+			unmarked_days.append(start_date)
+
+		start_date = add_days(start_date, 1)
 
 	return unmarked_days

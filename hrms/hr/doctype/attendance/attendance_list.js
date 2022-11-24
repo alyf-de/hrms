@@ -28,6 +28,7 @@ frappe.listview_settings['Attendance'] = {
 						dialog.set_df_property("days_section", "hidden", 1);
 						dialog.set_df_property("status", "hidden", 1);
 						dialog.set_df_property("exclude_holidays", "hidden", 1);
+						dialog.set_df_property("include_today_and_future_days", "hidden", 1);
 						dialog.get_field("start_date").value = null;
 						dialog.get_field("start_date").refresh();
 						dialog.get_field("end_date").value = null;
@@ -81,6 +82,13 @@ frappe.listview_settings['Attendance'] = {
 					onchange: () => me.get_unmarked_days(dialog),
 				},
 				{
+					label: __("Include Today and Future Days"),
+					fieldtype: "Check",
+					fieldname: "include_today_and_future_days",
+					hidden: 0,
+					onchange: () => me.get_unmarked_days(dialog),
+				},
+				{
 					label: __("Unmarked Attendance for days"),
 					fieldname: "unmarked_days",
 					fieldtype: "MultiCheck",
@@ -123,6 +131,14 @@ frappe.listview_settings['Attendance'] = {
 
 	get_unmarked_days: function(dialog) {
 		if (dialog.fields_dict.employee.value && dialog.fields_dict.start_date.value && dialog.fields_dict.end_date.value) {
+			if (dialog.get_field("end_date").value < frappe.datetime.get_today()) {
+				dialog.get_field("include_today_and_future_days").value = false;
+				dialog.get_field("include_today_and_future_days").refresh();
+				dialog.set_df_property("include_today_and_future_days", "hidden", 1);
+			} else {
+				dialog.set_df_property("include_today_and_future_days", "hidden", 0);
+			}
+			
 			dialog.set_df_property("days_section", "hidden", 0);
 			dialog.set_df_property("status", "hidden", 0);
 			dialog.set_df_property("exclude_holidays", "hidden", 0);
@@ -131,7 +147,8 @@ frappe.listview_settings['Attendance'] = {
 				dialog.fields_dict.employee.value,
 				dialog.fields_dict.start_date.value,
 				dialog.fields_dict.end_date.value,
-				dialog.fields_dict.exclude_holidays.get_value()
+				dialog.fields_dict.exclude_holidays.get_value(),
+				dialog.fields_dict.include_today_and_future_days.get_value(),
 			).then(options => {
 				dialog.set_df_property("unmarked_days", "options", []);
 				if (options.length > 0) {
@@ -144,7 +161,7 @@ frappe.listview_settings['Attendance'] = {
 		}
 	},
 
-	get_multi_select_options: function(employee, start_date, end_date, exclude_holidays) {
+	get_multi_select_options: function(employee, start_date, end_date, exclude_holidays, include_today_and_future_days) {
 		return new Promise(resolve => {
 			frappe.call({
 				method: 'hrms.hr.doctype.attendance.attendance.get_unmarked_days',
@@ -153,7 +170,8 @@ frappe.listview_settings['Attendance'] = {
 					employee: employee,
 					start_date: start_date,
 					end_date: end_date,
-					exclude_holidays: exclude_holidays
+					exclude_holidays: exclude_holidays,
+					include_today_and_future_days: include_today_and_future_days,
 				}
 			}).then(r => {
 				var options = [];
