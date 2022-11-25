@@ -144,38 +144,20 @@ frappe.listview_settings['Attendance'] = {
 			dialog.set_df_property("status", "hidden", 0);
 			dialog.set_df_property("exclude_holidays", "hidden", 0);
 			dialog.no_unmarked_days_left = false;
-			this.get_multi_select_options(
-				fields.employee.value,
-				fields.start_date.value,
-				fields.end_date.value,
-				fields.exclude_holidays.value,
-				fields.include_today_and_future_days.value,
-			).then(options => {
-				dialog.set_df_property("unmarked_days", "options", []);
-				if (options.length > 0) {
-					dialog.set_df_property("unmarked_days", "hidden", 0);
-					dialog.set_df_property("unmarked_days", "options", options);
-				} else {
-					dialog.no_unmarked_days_left = true;
-				}
-			});
-		}
-	},
 
-	get_multi_select_options: function(employee, start_date, end_date, exclude_holidays, include_today_and_future_days) {
-		return new Promise(resolve => {
 			frappe.call({
 				method: 'hrms.hr.doctype.attendance.attendance.get_unmarked_days',
 				async: false,
 				args: {
-					employee: employee,
-					start_date: start_date,
-					end_date: end_date,
-					exclude_holidays: exclude_holidays,
-					include_today_and_future_days: include_today_and_future_days,
+					employee: fields.employee.value,
+					start_date: fields.start_date.value,
+					end_date: fields.end_date.value,
+					exclude_holidays: fields.exclude_holidays.value,
+					include_today_and_future_days: fields.include_today_and_future_days.value,
 				}
 			}).then(r => {
 				var options = [];
+
 				for (var d in r.message) {
 					var momentObj = moment(r.message[d], 'YYYY-MM-DD');
 					var date = momentObj.format('DD-MM-YYYY');
@@ -185,8 +167,11 @@ frappe.listview_settings['Attendance'] = {
 						"checked": 1
 					});
 				}
-				resolve(options);
+
+				dialog.set_df_property("unmarked_days", "options", options.length > 0 ? options : []);
+				dialog.no_unmarked_days_left = options.length === 0;
 			});
-		});
-	}
+		}
+	},
+
 };
