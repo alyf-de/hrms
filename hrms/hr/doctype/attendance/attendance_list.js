@@ -1,5 +1,6 @@
 frappe.listview_settings['Attendance'] = {
 	add_fields: ["status", "attendance_date"],
+	
 	get_indicator: function (doc) {
 		if (["Present", "Work From Home"].includes(doc.status)) {
 			return [__(doc.status), "green", "status,=," + doc.status];
@@ -24,23 +25,13 @@ frappe.listview_settings['Attendance'] = {
 						return {query: "erpnext.controllers.queries.employee_query"};
 					},
 					reqd: 1,
-					onchange: function() {
-						dialog.set_df_property("days_section", "hidden", 1);
-						dialog.set_df_property("status", "hidden", 1);
-						dialog.set_df_property("exclude_holidays", "hidden", 1);
-						dialog.set_df_property("include_today_and_future_days", "hidden", 1);
-						dialog.get_field("start_date").value = null;
-						dialog.get_field("start_date").refresh();
-						dialog.get_field("end_date").value = null;
-						dialog.get_field("end_date").refresh();
-						dialog.set_df_property("unmarked_days", "options", []);
-						dialog.no_unmarked_days_left = false;
-					}
+					onchange: () => me.reset_dialog(dialog),
 				},
 				{
 					label: __("Time Period"),
 					fieldtype: "Section Break",
 					fieldname: "time_period_section",
+					hidden: 1,
 				},
 				{
 					label: __("Start"),
@@ -70,7 +61,6 @@ frappe.listview_settings['Attendance'] = {
 					fieldtype: "Select",
 					fieldname: "status",
 					options: ["Present", "Absent", "Half Day", "Work From Home"],
-					hidden: 1,
 					reqd: 1,
 
 				},
@@ -78,14 +68,12 @@ frappe.listview_settings['Attendance'] = {
 					label: __("Exclude Holidays"),
 					fieldtype: "Check",
 					fieldname: "exclude_holidays",
-					hidden: 1,
 					onchange: () => me.get_unmarked_days(dialog),
 				},
 				{
 					label: __("Include Today and Future Days"),
 					fieldtype: "Check",
 					fieldname: "include_today_and_future_days",
-					hidden: 0,
 					onchange: () => me.get_unmarked_days(dialog),
 				},
 				{
@@ -94,7 +82,6 @@ frappe.listview_settings['Attendance'] = {
 					fieldtype: "MultiCheck",
 					options: [],
 					columns: 2,
-					hidden: 1
 				}],
 				primary_action(data) {
 					if (cur_dialog.no_unmarked_days_left) {
@@ -129,26 +116,40 @@ frappe.listview_settings['Attendance'] = {
 		});
 	},
 
+	reset_dialog: function(dialog) {
+		var fields = dialog.fields_dict;
+
+		dialog.set_df_property("time_period_section", "hidden", dialog.fields_dict.employee.value ? 0 : 1);
+		dialog.set_df_property("days_section", "hidden", 1);
+		dialog.set_df_property("unmarked_days", "options", []);
+		dialog.no_unmarked_days_left = false;
+		fields.start_date.set_value(null);
+		fields.end_date.set_value(null);
+		fields.exclude_holidays.value = false;
+		fields.include_today_and_future_days.value = false;
+	},
+
 	get_unmarked_days: function(dialog) {
-		if (dialog.fields_dict.employee.value && dialog.fields_dict.start_date.value && dialog.fields_dict.end_date.value) {
-			if (dialog.get_field("end_date").value < frappe.datetime.get_today()) {
-				dialog.get_field("include_today_and_future_days").value = false;
-				dialog.get_field("include_today_and_future_days").refresh();
+		var fields = dialog.fields_dict;
+
+		if (fields.employee.value && fields.start_date.value && fields.end_date.value) {
+			if (fields.end_date.value < frappe.datetime.get_today()) {
+				fields.include_today_and_future_days.value = false;
 				dialog.set_df_property("include_today_and_future_days", "hidden", 1);
 			} else {
 				dialog.set_df_property("include_today_and_future_days", "hidden", 0);
 			}
-			
+
 			dialog.set_df_property("days_section", "hidden", 0);
 			dialog.set_df_property("status", "hidden", 0);
 			dialog.set_df_property("exclude_holidays", "hidden", 0);
 			dialog.no_unmarked_days_left = false;
 			this.get_multi_select_options(
-				dialog.fields_dict.employee.value,
-				dialog.fields_dict.start_date.value,
-				dialog.fields_dict.end_date.value,
-				dialog.fields_dict.exclude_holidays.get_value(),
-				dialog.fields_dict.include_today_and_future_days.get_value(),
+				fields.employee.value,
+				fields.start_date.value,
+				fields.end_date.value,
+				fields.exclude_holidays.value,
+				fields.include_today_and_future_days.value,
 			).then(options => {
 				dialog.set_df_property("unmarked_days", "options", []);
 				if (options.length > 0) {
