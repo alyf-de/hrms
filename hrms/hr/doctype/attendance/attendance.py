@@ -319,7 +319,9 @@ def mark_bulk_attendance(data):
 
 
 @frappe.whitelist()
-def get_unmarked_days(employee, start_date, end_date, exclude_holidays=0, include_today_and_future_days=0):
+def get_unmarked_days(
+	employee, start_date, end_date, exclude_holidays=0, include_today_and_future_days=0
+):
 	joining_date, relieving_date = frappe.get_cached_value(
 		"Employee", employee, ["date_of_joining", "relieving_date"]
 	)
