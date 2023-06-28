@@ -51,7 +51,7 @@ def add_header(w):
 	)
 	w.writerow(["Notes:"])
 	w.writerow(["Please do not change the template headings"])
-	w.writerow(["Status should be one of these values: " + status])
+	w.writerow([f"Status should be one of these values: {status}"])
 	w.writerow(["If you are overwriting existing attendance records, 'ID' column mandatory"])
 	w.writerow(
 		["ID", "Employee", "Employee Name", "Date", "Status", "Leave Type", "Company", "Naming Series"]
@@ -83,11 +83,11 @@ def get_data(args):
 			existing_attendance = {}
 			if (
 				existing_attendance_records
-				and tuple([getdate(date), employee.name]) in existing_attendance_records
+				and (getdate(date), employee.name) in existing_attendance_records
 				and getdate(employee.date_of_joining) <= getdate(date)
 				and getdate(employee.relieving_date) >= getdate(date)
 			):
-				existing_attendance = existing_attendance_records[tuple([getdate(date), employee.name])]
+				existing_attendance = existing_attendance_records[getdate(date), employee.name]
 
 			employee_holiday_list = get_holiday_list_for_employee(employee.name)
 
@@ -127,17 +127,21 @@ def writedata(w, data):
 def get_dates(args):
 	"""get list of dates in between from date and to date"""
 	no_of_days = date_diff(add_days(args["to_date"], 1), args["from_date"])
-	dates = [add_days(args["from_date"], i) for i in range(0, no_of_days)]
-	return dates
+	return [add_days(args["from_date"], i) for i in range(0, no_of_days)]
 
 
 def get_active_employees():
-	employees = frappe.db.get_all(
+	return frappe.db.get_all(
 		"Employee",
-		fields=["name", "employee_name", "date_of_joining", "company", "relieving_date"],
+		fields=[
+			"name",
+			"employee_name",
+			"date_of_joining",
+			"company",
+			"relieving_date",
+		],
 		filters={"docstatus": ["<", 2], "status": "Active"},
 	)
-	return employees
 
 
 def get_existing_attendance_records(args):
@@ -148,11 +152,7 @@ def get_existing_attendance_records(args):
 		as_dict=1,
 	)
 
-	existing_attendance = {}
-	for att in attendance:
-		existing_attendance[tuple([att.attendance_date, att.employee])] = att
-
-	return existing_attendance
+	return {(att.attendance_date, att.employee): att for att in attendance}
 
 
 def get_naming_series():
@@ -172,7 +172,7 @@ def upload():
 	rows = read_csv_content(frappe.local.uploaded_file)
 	if not rows:
 		frappe.throw(_("Please select a csv file"))
-	frappe.enqueue(import_attendances, rows=rows, now=True if len(rows) < 200 else False)
+	frappe.enqueue(import_attendances, rows=rows, now=len(rows) < 200)
 
 
 def import_attendances(rows):

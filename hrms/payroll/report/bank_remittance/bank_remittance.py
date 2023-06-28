@@ -74,12 +74,16 @@ def execute(filters=None):
 			row = {
 				"payroll_no": salary.payroll_entry,
 				"debit_account": salary.debit_acc_no,
-				"payment_date": frappe.utils.formatdate(salary.modified.strftime("%Y-%m-%d")),
+				"payment_date": frappe.utils.formatdate(
+					salary.modified.strftime("%Y-%m-%d")
+				),
 				"bank_name": salary.bank_name,
 				"employee_account_no": salary.bank_account_no,
 				"bank_code": salary.ifsc_code,
-				"employee_name": salary.employee + ": " + salary.employee_name,
-				"currency": frappe.get_cached_value("Company", filters.company, "default_currency"),
+				"employee_name": f"{salary.employee}: {salary.employee_name}",
+				"currency": frappe.get_cached_value(
+					"Company", filters.company, "default_currency"
+				),
 				"amount": salary.net_pay,
 			}
 			data.append(row)
@@ -88,8 +92,7 @@ def execute(filters=None):
 
 
 def get_bank_accounts():
-	accounts = [d.name for d in get_all("Account", filters={"account_type": "Bank"})]
-	return accounts
+	return [d.name for d in get_all("Account", filters={"account_type": "Bank"})]
 
 
 def get_payroll_entries(accounts, filters):
@@ -128,10 +131,7 @@ def get_salary_slips(payroll_entries):
 		],
 	)
 
-	payroll_entry_map = {}
-	for entry in payroll_entries:
-		payroll_entry_map[entry.name] = entry
-
+	payroll_entry_map = {entry.name: entry for entry in payroll_entries}
 	# appending company debit accounts
 	for slip in salary_slips:
 		if slip.payroll_entry:
@@ -160,10 +160,7 @@ def set_company_account(payment_accounts, payroll_entries):
 	company_accounts = get_all(
 		"Bank Account", [("account", "in", payment_accounts)], ["account", "bank_account_no"]
 	)
-	company_accounts_map = {}
-	for acc in company_accounts:
-		company_accounts_map[acc.account] = acc
-
+	company_accounts_map = {acc.account: acc for acc in company_accounts}
 	for entry in payroll_entries:
 		company_account = ""
 		if entry.payment_account in company_accounts_map:

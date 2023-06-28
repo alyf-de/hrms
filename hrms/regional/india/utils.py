@@ -125,10 +125,7 @@ def calculate_hra_exemption(
 	salary_structure, annual_basic, annual_hra, monthly_house_rent, rented_in_metro_city
 ):
 	# TODO make this configurable
-	exemptions = []
-	# case 1: The actual amount allotted by the employer as the HRA.
-	exemptions.append(annual_hra)
-
+	exemptions = [annual_hra]
 	# case 2: Actual rent paid less 10% of the basic salary.
 	actual_annual_rent = monthly_house_rent * 12
 	exemptions.append(flt(actual_annual_rent) - flt(annual_basic * 0.1))
@@ -162,7 +159,7 @@ def validate_house_rent_dates(doc):
 	if date_diff(doc.rented_to_date, doc.rented_from_date) < 14:
 		frappe.throw(_("House rented dates should be atleast 15 days apart"))
 
-	proofs = frappe.db.sql(
+	if proofs := frappe.db.sql(
 		"""
 		select name
 		from `tabEmployee Tax Exemption Proof Submission`
@@ -176,9 +173,7 @@ def validate_house_rent_dates(doc):
 			"from_date": doc.rented_from_date,
 			"to_date": doc.rented_to_date,
 		},
-	)
-
-	if proofs:
+	):
 		frappe.throw(_("House rent paid days overlapping with {0}").format(proofs[0][0]))
 
 

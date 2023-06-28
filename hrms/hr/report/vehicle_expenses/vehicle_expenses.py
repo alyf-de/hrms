@@ -109,13 +109,12 @@ def get_conditions(filters):
 
 
 def get_period_dates(filters):
-	if filters.filter_based_on == "Fiscal Year" and filters.fiscal_year:
-		fy = frappe.db.get_value(
-			"Fiscal Year", filters.fiscal_year, ["year_start_date", "year_end_date"], as_dict=True
-		)
-		return fy.year_start_date, fy.year_end_date
-	else:
+	if filters.filter_based_on != "Fiscal Year" or not filters.fiscal_year:
 		return filters.from_date, filters.to_date
+	fy = frappe.db.get_value(
+		"Fiscal Year", filters.fiscal_year, ["year_start_date", "year_end_date"], as_dict=True
+	)
+	return fy.year_start_date, fy.year_end_date
 
 
 def get_service_expense(logname):
@@ -168,10 +167,8 @@ def get_chart_data(data, filters):
 	if service_exp_data:
 		datasets.append({"name": _("Service Expenses"), "values": service_exp_data})
 
-	chart = {
+	return {
 		"data": {"labels": labels, "datasets": datasets},
 		"type": "line",
 		"fieldtype": "Currency",
 	}
-
-	return chart

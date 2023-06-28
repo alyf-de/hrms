@@ -53,19 +53,16 @@ def execute(filters: Optional[Filters] = None) -> Tuple:
 
 
 def get_message() -> str:
-	message = ""
 	colors = ["green", "red", "orange", "green", "#318AD8", "", ""]
 
-	count = 0
-	for status, abbr in status_map.items():
-		message += f"""
+	return "".join(
+		f"""
 			<span style='border-left: 2px solid {colors[count]}; padding-right: 12px; padding-left: 5px; margin-right: 3px;'>
 				{status} - {abbr}
 			</span>
 		"""
-		count += 1
-
-	return message
+		for count, (status, abbr) in enumerate(status_map.items())
+	)
 
 
 def get_columns(filters: Filters) -> List[Dict]:
@@ -146,13 +143,15 @@ def get_columns(filters: Filters) -> List[Dict]:
 
 def get_columns_for_leave_types() -> List[Dict]:
 	leave_types = frappe.db.get_all("Leave Type", pluck="name")
-	types = []
-	for entry in leave_types:
-		types.append(
-			{"label": entry, "fieldname": frappe.scrub(entry), "fieldtype": "Float", "width": 120}
-		)
-
-	return types
+	return [
+		{
+			"label": entry,
+			"fieldname": frappe.scrub(entry),
+			"fieldtype": "Float",
+			"width": 120,
+		}
+		for entry in leave_types
+	]
 
 
 def get_columns_for_days(filters: Filters) -> List[Dict]:
@@ -161,11 +160,11 @@ def get_columns_for_days(filters: Filters) -> List[Dict]:
 
 	for day in range(1, total_days + 1):
 		# forms the dates from selected year and month from filters
-		date = "{}-{}-{}".format(cstr(filters.year), cstr(filters.month), cstr(day))
+		date = f"{cstr(filters.year)}-{cstr(filters.month)}-{cstr(day)}"
 		# gets abbr from weekday number
 		weekday = day_abbr[getdate(date).weekday()]
 		# sets days as 1 Mon, 2 Tue, 3 Wed
-		label = "{} {}".format(cstr(day), weekday)
+		label = f"{cstr(day)} {weekday}"
 		days.append({"label": label, "fieldtype": "Data", "fieldname": day, "width": 65})
 
 	return days
@@ -189,9 +188,9 @@ def get_data(filters: Filters, attendance_map: Dict) -> List[Dict]:
 			if not value:
 				continue
 
-			records = get_rows(employee_details[value], filters, holiday_map, attendance_map)
-
-			if records:
+			if records := get_rows(
+				employee_details[value], filters, holiday_map, attendance_map
+			):
 				data.append({group_by_column: frappe.bold(value)})
 				data.extend(records)
 	else:
@@ -349,7 +348,7 @@ def get_rows(
 
 			row = {"employee": employee, "employee_name": details.employee_name}
 			set_defaults_for_summarized_view(filters, row)
-			row.update(attendance)
+			row |= attendance
 			row.update(leave_summary)
 			row.update(entry_exits_summary)
 
@@ -491,15 +490,14 @@ def get_attendance_status_for_detailed_view(
 
 
 def get_holiday_status(day: int, holidays: List) -> str:
-	status = None
-	for holiday in holidays:
-		if day == holiday.get("day_of_month"):
-			if holiday.get("weekly_off"):
-				status = "Weekly Off"
-			else:
-				status = "Holiday"
-			break
-	return status
+	return next(
+		(
+			"Weekly Off" if holiday.get("weekly_off") else "Holiday"
+			for holiday in holidays
+			if day == holiday.get("day_of_month")
+		),
+		None,
+	)
 
 
 def get_leave_summary(employee: str, filters: Filters) -> Dict[str, float]:

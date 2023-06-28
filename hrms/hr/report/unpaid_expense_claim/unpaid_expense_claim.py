@@ -25,10 +25,7 @@ def get_columns():
 
 
 def get_unclaimed_expese_claims(filters):
-	cond = "1=1"
-	if filters.get("employee"):
-		cond = "ec.employee = %(employee)s"
-
+	cond = "ec.employee = %(employee)s" if filters.get("employee") else "1=1"
 	return frappe.db.sql(
 		"""
 		select

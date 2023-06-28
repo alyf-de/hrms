@@ -120,9 +120,7 @@ def get_data(filters):
 	)
 
 	query = get_conditions(filters, query, employee, interview, fnf)
-	result = query.run(as_dict=True)
-
-	return result
+	return query.run(as_dict=True)
 
 
 def get_conditions(filters, query, employee, interview, fnf):
@@ -188,16 +186,19 @@ def get_chart_data(data):
 		else:
 			pending += 1
 
-	chart = {
+	return {
 		"data": {
 			"labels": [_("Retained"), _("Exit Confirmed"), _("Decision Pending")],
-			"datasets": [{"name": _("Employee Status"), "values": [retained, exit_confirmed, pending]}],
+			"datasets": [
+				{
+					"name": _("Employee Status"),
+					"values": [retained, exit_confirmed, pending],
+				}
+			],
 		},
 		"type": "donut",
 		"colors": ["green", "red", "blue"],
 	}
-
-	return chart
 
 
 def get_report_summary(data):

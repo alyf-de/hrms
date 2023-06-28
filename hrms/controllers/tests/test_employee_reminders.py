@@ -105,7 +105,7 @@ class TestEmployeeReminders(unittest.TestCase):
 		employee = frappe.get_doc(
 			"Employee", frappe.db.sql_list("select name from tabEmployee limit 1")[0]
 		)
-		employee.date_of_birth = "1992" + frappe.utils.nowdate()[4:]
+		employee.date_of_birth = f"1992{frappe.utils.nowdate()[4:]}"
 		employee.company_email = "test@example.com"
 		employee.company = "_Test Company"
 		employee.save()
@@ -141,10 +141,7 @@ class TestEmployeeReminders(unittest.TestCase):
 
 		employees_having_work_anniversary = get_employees_having_an_event_today("work_anniversary")
 		employees = employees_having_work_anniversary.get("_Test Company") or []
-		user_ids = []
-		for entry in employees:
-			user_ids.append(entry.user_id)
-
+		user_ids = [entry.user_id for entry in employees]
 		self.assertTrue("test_emp_work_anniversary@gmail.com" in user_ids)
 
 		hr_settings = frappe.get_doc("HR Settings", "HR Settings")
@@ -167,10 +164,7 @@ class TestEmployeeReminders(unittest.TestCase):
 
 		employees_having_work_anniversary = get_employees_having_an_event_today("work_anniversary")
 		employees = employees_having_work_anniversary.get("_Test Company") or []
-		user_ids = []
-		for entry in employees:
-			user_ids.append(entry.user_id)
-
+		user_ids = [entry.user_id for entry in employees]
 		self.assertTrue("test_work_anniversary_2@gmail.com" not in user_ids)
 
 	def test_send_holidays_reminder_in_advance(self):

@@ -21,8 +21,7 @@ def execute():
 	)
 
 	for d in salary_structure_assignments:
-		cost_center = employee_cost_center.get(d.employee)
-		if cost_center:
+		if cost_center := employee_cost_center.get(d.employee):
 			assignment = frappe.get_doc("Salary Structure Assignment", d.name)
 			if not assignment.get("payroll_cost_centers"):
 				assignment.append("payroll_cost_centers", {"cost_center": cost_center, "percentage": 100})

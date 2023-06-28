@@ -73,9 +73,7 @@ class DailyWorkSummary(Document):
 			# make thumbnail image
 			try:
 				if original_image:
-					file_name = frappe.get_list("File", {"file_url": original_image})
-
-					if file_name:
+					if file_name := frappe.get_list("File", {"file_url": original_image}):
 						file_name = file_name[0].name
 						file_doc = frappe.get_doc("File", file_name)
 						thumbnail_image = file_doc.make_thumbnail(
@@ -111,9 +109,7 @@ def get_user_emails_from_group(group):
 	if isinstance(group_doc, str):
 		group_doc = frappe.get_doc("Daily Work Summary Group", group)
 
-	emails = get_users_email(group_doc)
-
-	return emails
+	return get_users_email(group_doc)
 
 
 def get_users_email(doc):

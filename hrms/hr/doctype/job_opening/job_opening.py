@@ -29,8 +29,9 @@ class JobOpening(WebsiteGenerator):
 
 	def validate_current_vacancies(self):
 		if not self.staffing_plan:
-			staffing_plan = get_active_staffing_plan_details(self.company, self.designation)
-			if staffing_plan:
+			if staffing_plan := get_active_staffing_plan_details(
+				self.company, self.designation
+			):
 				self.staffing_plan = staffing_plan[0].name
 				self.planned_vacancies = staffing_plan[0].vacancies
 		elif not self.planned_vacancies:

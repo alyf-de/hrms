@@ -15,7 +15,7 @@ def execute(filters=None):
 
 
 def get_columns(filters):
-	columns = [
+	return [
 		{
 			"label": _("Employee"),
 			"options": "Employee",
@@ -30,41 +30,59 @@ def get_columns(filters):
 			"fieldtype": "Link",
 			"width": 160,
 		},
-		{"label": _("PF Account"), "fieldname": "pf_account", "fieldtype": "Data", "width": 140},
-		{"label": _("PF Amount"), "fieldname": "pf_amount", "fieldtype": "Currency", "width": 140},
+		{
+			"label": _("PF Account"),
+			"fieldname": "pf_account",
+			"fieldtype": "Data",
+			"width": 140,
+		},
+		{
+			"label": _("PF Amount"),
+			"fieldname": "pf_amount",
+			"fieldtype": "Currency",
+			"width": 140,
+		},
 		{
 			"label": _("Additional PF"),
 			"fieldname": "additional_pf",
 			"fieldtype": "Currency",
 			"width": 140,
 		},
-		{"label": _("PF Loan"), "fieldname": "pf_loan", "fieldtype": "Currency", "width": 140},
-		{"label": _("Total"), "fieldname": "total", "fieldtype": "Currency", "width": 140},
+		{
+			"label": _("PF Loan"),
+			"fieldname": "pf_loan",
+			"fieldtype": "Currency",
+			"width": 140,
+		},
+		{
+			"label": _("Total"),
+			"fieldname": "total",
+			"fieldtype": "Currency",
+			"width": 140,
+		},
 	]
-
-	return columns
 
 
 def get_conditions(filters):
 	conditions = [""]
 
 	if filters.get("department"):
-		conditions.append("sal.department = '%s' " % (filters["department"]))
+		conditions.append(f"""sal.department = '{filters["department"]}' """)
 
 	if filters.get("branch"):
-		conditions.append("sal.branch = '%s' " % (filters["branch"]))
+		conditions.append(f"""sal.branch = '{filters["branch"]}' """)
 
 	if filters.get("company"):
-		conditions.append("sal.company = '%s' " % (filters["company"]))
+		conditions.append(f"""sal.company = '{filters["company"]}' """)
 
 	if filters.get("month"):
-		conditions.append("month(sal.start_date) = '%s' " % (filters["month"]))
+		conditions.append(f"""month(sal.start_date) = '{filters["month"]}' """)
 
 	if filters.get("year"):
-		conditions.append("year(start_date) = '%s' " % (filters["year"]))
+		conditions.append(f"""year(start_date) = '{filters["year"]}' """)
 
 	if filters.get("mode_of_payment"):
-		conditions.append("sal.mode_of_payment = '%s' " % (filters["mode_of_payment"]))
+		conditions.append(f"""sal.mode_of_payment = '{filters["mode_of_payment"]}' """)
 
 	return " and ".join(conditions)
 

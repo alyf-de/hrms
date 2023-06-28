@@ -42,10 +42,7 @@ def get_add_on_details(plan: str) -> dict[str, int]:
 	}
 	"""
 	EMPLOYEE_LIMITS = {"Basic": 25, "Essential": 50, "Professional": 100}
-	add_on_details = {}
-
-	employees_included_in_plan = EMPLOYEE_LIMITS.get(plan)
-	if employees_included_in_plan:
+	if employees_included_in_plan := EMPLOYEE_LIMITS.get(plan):
 		active_employees = get_active_employees()
 		add_on_employees = (
 			active_employees - employees_included_in_plan
@@ -55,8 +52,7 @@ def get_add_on_details(plan: str) -> dict[str, int]:
 	else:
 		add_on_employees = 0
 
-	add_on_details["employees"] = add_on_employees
-	return add_on_details
+	return {"employees": add_on_employees}
 
 
 def get_active_employees() -> int:
@@ -65,7 +61,7 @@ def get_active_employees() -> int:
 
 @frappe.whitelist(allow_guest=True)
 def subscription_updated(app: str, plan: str):
-	if app in ["hrms", "erpnext"] and plan:
+	if app in {"hrms", "erpnext"} and plan:
 		update_erpnext_access()
 
 
@@ -132,9 +128,7 @@ def get_erpnext_roles() -> set:
 def get_roles_for_app(app_name: str) -> set:
 	erpnext_modules = get_modules_by_app(app_name)
 	doctypes = get_doctypes_by_modules(erpnext_modules)
-	roles = roles_by_doctype(doctypes)
-
-	return roles
+	return roles_by_doctype(doctypes)
 
 
 def get_modules_by_app(app_name: str) -> list:
@@ -150,9 +144,7 @@ def roles_by_doctype(doctypes: list) -> set:
 	for d in doctypes:
 		permissions = frappe.get_meta(d).permissions
 
-		for d in permissions:
-			roles.append(d.role)
-
+		roles.extend(d.role for d in permissions)
 	return set(roles)
 
 
@@ -160,15 +152,7 @@ def hide_erpnext() -> bool:
 	hr_subscription = has_subscription(frappe.conf.sk_hrms)
 	erpnext_subscription = has_subscription(frappe.conf.sk_erpnext_smb or frappe.conf.sk_erpnext)
 
-	if not hr_subscription:
-		return False
-
-	if hr_subscription and erpnext_subscription:
-		# subscribed for ERPNext
-		return False
-
-	# no subscription for ERPNext
-	return True
+	return False if not hr_subscription else not erpnext_subscription
 
 
 def has_subscription(secret_key) -> bool:
@@ -176,4 +160,4 @@ def has_subscription(secret_key) -> bool:
 	response = requests.request(method="POST", url=url, timeout=5)
 
 	status = response.json().get("message")
-	return True if status == "Active" else False
+	return status == "Active"

@@ -327,15 +327,18 @@ class TestEmployeeCheckin(FrappeTestCase):
 
 def make_n_checkins(employee, n, hours_to_reverse=1):
 	logs = [make_checkin(employee, now_datetime() - timedelta(hours=hours_to_reverse, minutes=n + 1))]
-	for i in range(n - 1):
-		logs.append(
-			make_checkin(employee, now_datetime() - timedelta(hours=hours_to_reverse, minutes=n - i))
+	logs.extend(
+		make_checkin(
+			employee,
+			now_datetime() - timedelta(hours=hours_to_reverse, minutes=n - i),
 		)
+		for i in range(n - 1)
+	)
 	return logs
 
 
 def make_checkin(employee, time=now_datetime()):
-	log = frappe.get_doc(
+	return frappe.get_doc(
 		{
 			"doctype": "Employee Checkin",
 			"employee": employee,
@@ -344,4 +347,3 @@ def make_checkin(employee, time=now_datetime()):
 			"log_type": "IN",
 		}
 	).insert()
-	return log

@@ -132,8 +132,7 @@ class ShiftType(Document):
 			shift_details = get_employee_shift(employee, timestamp, True)
 
 			if shift_details and shift_details.shift_type.name == self.name:
-				attendance = mark_attendance(employee, date, "Absent", self.name)
-				if attendance:
+				if attendance := mark_attendance(employee, date, "Absent", self.name):
 					frappe.get_doc(
 						{
 							"doctype": "Comment",
@@ -164,10 +163,9 @@ class ShiftType(Document):
 			shift_details.actual_start if shift_details else get_datetime(self.last_sync_of_checkin)
 		)
 
-		# check if shift is found for 1 day before the last sync of checkin
-		# absentees are auto-marked 1 day after the shift to wait for any manual attendance records
-		prev_shift = get_employee_shift(employee, last_shift_time - timedelta(days=1), True, "reverse")
-		if prev_shift:
+		if prev_shift := get_employee_shift(
+			employee, last_shift_time - timedelta(days=1), True, "reverse"
+		):
 			end_date = (
 				min(prev_shift.start_datetime.date(), relieving_date)
 				if relieving_date

@@ -45,11 +45,7 @@ def get_data(
 
 
 def get_ranges() -> list[tuple[int, int]]:
-	ranges = []
-
-	for i in range(15, 80, 5):
-		ranges.append((i, i + 4))
-
+	ranges = [(i, i + 4) for i in range(15, 80, 5)]
 	ranges.append(80)
 
 	return ranges
@@ -75,13 +71,12 @@ def get_employees_by_age(age_list, ranges) -> tuple[list[str], list[int]]:
 		else:
 			age_range.append(f"{bracket[0]}-{bracket[1]}")
 
-		count = 0
-		for age in age_list:
-			if (isinstance(bracket, int) and age >= bracket) or (
-				isinstance(bracket, tuple) and bracket[0] <= age <= bracket[1]
-			):
-				count += 1
-
+		count = sum(
+			1
+			for age in age_list
+			if (isinstance(bracket, int) and age >= bracket)
+			or (isinstance(bracket, tuple) and bracket[0] <= age <= bracket[1])
+		)
 		values.append(count)
 
 	return age_range, values

@@ -64,19 +64,19 @@ def get_conditions(filters):
 	conditions = [""]
 
 	if filters.get("department"):
-		conditions.append("sal.department = '%s' " % (filters["department"]))
+		conditions.append(f"""sal.department = '{filters["department"]}' """)
 
 	if filters.get("branch"):
-		conditions.append("sal.branch = '%s' " % (filters["branch"]))
+		conditions.append(f"""sal.branch = '{filters["branch"]}' """)
 
 	if filters.get("company"):
-		conditions.append("sal.company = '%s' " % (filters["company"]))
+		conditions.append(f"""sal.company = '{filters["company"]}' """)
 
 	if filters.get("month"):
-		conditions.append("month(sal.start_date) = '%s' " % (filters["month"]))
+		conditions.append(f"""month(sal.start_date) = '{filters["month"]}' """)
 
 	if filters.get("year"):
-		conditions.append("year(start_date) = '%s' " % (filters["year"]))
+		conditions.append(f"""year(start_date) = '{filters["year"]}' """)
 
 	return " and ".join(conditions)
 

@@ -32,7 +32,7 @@ class JobOffer(Document):
 		if staffing_plan and check_vacancies:
 			job_offers = self.get_job_offer(staffing_plan.from_date, staffing_plan.to_date)
 			if not staffing_plan.get("vacancies") or cint(staffing_plan.vacancies) - len(job_offers) <= 0:
-				error_variable = "for " + frappe.bold(self.designation)
+				error_variable = f"for {frappe.bold(self.designation)}"
 				if staffing_plan.get("parent"):
 					error_variable = frappe.bold(get_link_to_form("Staffing Plan", staffing_plan.parent))
 

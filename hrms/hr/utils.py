@@ -130,9 +130,9 @@ def validate_overlap(doc, from_date, to_date, company=None):
 
 	if not doc.name:
 		# hack! if name is null, it could cause problems with !=
-		doc.name = "New " + doc.doctype
+		doc.name = f"New {doc.doctype}"
 
-	overlap_doc = frappe.db.sql(
+	if overlap_doc := frappe.db.sql(
 		query.format(doc.doctype),
 		{
 			"employee": doc.get("employee"),
@@ -142,9 +142,7 @@ def validate_overlap(doc, from_date, to_date, company=None):
 			"company": company,
 		},
 		as_dict=1,
-	)
-
-	if overlap_doc:
+	):
 		if doc.get("employee"):
 			exists_for = doc.employee
 		if company:
@@ -176,7 +174,7 @@ def throw_overlap_error(doc, exists_for, overlap_doc, from_date, to_date):
 
 
 def validate_duplicate_exemption_for_payroll_period(doctype, docname, payroll_period, employee):
-	existing_record = frappe.db.exists(
+	if existing_record := frappe.db.exists(
 		doctype,
 		{
 			"payroll_period": payroll_period,
@@ -184,8 +182,7 @@ def validate_duplicate_exemption_for_payroll_period(doctype, docname, payroll_pe
 			"docstatus": ["<", 2],
 			"name": ["!=", docname],
 		},
-	)
-	if existing_record:
+	):
 		frappe.throw(
 			_("{0} already exists for employee {1} and period {2}").format(
 				doctype, employee, payroll_period
@@ -225,13 +222,15 @@ def get_total_exemption_amount(declarations):
 		):
 			exemptions.get(d.exemption_category).total_exemption_amount = category_max_amount
 
-	total_exemption_amount = sum([flt(d.total_exemption_amount) for d in exemptions.values()])
+	total_exemption_amount = sum(
+		flt(d.total_exemption_amount) for d in exemptions.values()
+	)
 	return total_exemption_amount
 
 
 @frappe.whitelist()
 def get_leave_period(from_date, to_date, company):
-	leave_period = frappe.db.sql(
+	if leave_period := frappe.db.sql(
 		"""
 		select name, from_date, to_date
 		from `tabLeave Period`
@@ -242,9 +241,7 @@ def get_leave_period(from_date, to_date, company):
 	""",
 		{"from_date": from_date, "to_date": to_date, "company": company},
 		as_dict=1,
-	)
-
-	if leave_period:
+	):
 		return leave_period
 
 
@@ -319,7 +316,7 @@ def update_previous_leave_allocation(allocation, annual_allocation, e_leave_type
 	allocation = frappe.get_doc("Leave Allocation", allocation.name)
 	new_allocation = flt(allocation.total_leaves_allocated) + flt(earned_leaves)
 
-	if new_allocation > e_leave_type.max_leaves_allowed and e_leave_type.max_leaves_allowed > 0:
+	if new_allocation > e_leave_type.max_leaves_allowed > 0:
 		new_allocation = e_leave_type.max_leaves_allowed
 
 	if new_allocation != allocation.total_leaves_allocated:
@@ -342,8 +339,8 @@ def update_previous_leave_allocation(allocation, annual_allocation, e_leave_type
 
 def get_monthly_earned_leave(annual_leaves, frequency, rounding):
 	earned_leaves = 0.0
-	divide_by_frequency = {"Yearly": 1, "Half-Yearly": 2, "Quarterly": 4, "Monthly": 12}
 	if annual_leaves:
+		divide_by_frequency = {"Yearly": 1, "Half-Yearly": 2, "Quarterly": 4, "Monthly": 12}
 		earned_leaves = flt(annual_leaves) / divide_by_frequency[frequency]
 		if rounding:
 			if rounding == "0.25":
@@ -372,9 +369,7 @@ def is_earned_leave_already_allocated(allocation, annual_allocation):
 	if allocation.unused_leaves:
 		num_allocations -= allocation.unused_leaves
 
-	if num_allocations >= leaves_for_passed_months:
-		return True
-	return False
+	return num_allocations >= leaves_for_passed_months
 
 
 def get_leave_allocations(date, leave_type):
@@ -434,28 +429,26 @@ def check_effective_date(from_date, to_date, frequency, based_on_date_of_joining
 		elif frequency == "Yearly" and rd.months % 12:
 			return True
 
-	if frappe.flags.in_test:
-		return True
-
-	return False
+	return bool(frappe.flags.in_test)
 
 
 def get_salary_assignments(employee, payroll_period):
 	start_date, end_date = frappe.db.get_value(
 		"Payroll Period", payroll_period, ["start_date", "end_date"]
 	)
-	assignments = frappe.db.get_all(
+	return frappe.db.get_all(
 		"Salary Structure Assignment",
-		filters={"employee": employee, "docstatus": 1, "from_date": ["between", (start_date, end_date)]},
+		filters={
+			"employee": employee,
+			"docstatus": 1,
+			"from_date": ["between", (start_date, end_date)],
+		},
 		fields=["*"],
 		order_by="from_date",
 	)
 
-	return assignments
-
 
 def get_sal_slip_total_benefit_given(employee, payroll_period, component=False):
-	total_given_benefit_amount = 0
 	query = """
 	select sum(sd.amount) as total_amount
 	from `tabSalary Slip` ss, `tabSalary Detail` sd
@@ -482,9 +475,11 @@ def get_sal_slip_total_benefit_given(employee, payroll_period, component=False):
 		as_dict=True,
 	)
 
-	if sum_of_given_benefit and flt(sum_of_given_benefit[0].total_amount) > 0:
-		total_given_benefit_amount = sum_of_given_benefit[0].total_amount
-	return total_given_benefit_amount
+	return (
+		sum_of_given_benefit[0].total_amount
+		if sum_of_given_benefit and flt(sum_of_given_benefit[0].total_amount) > 0
+		else 0
+	)
 
 
 def get_holiday_dates_for_employee(employee, start_date, end_date):
@@ -518,11 +513,12 @@ def get_holidays_for_employee(
 	if only_non_weekly:
 		filters["weekly_off"] = False
 
-	holidays = frappe.get_all(
-		"Holiday", fields=["description", "holiday_date"], filters=filters, order_by="holiday_date"
+	return frappe.get_all(
+		"Holiday",
+		fields=["description", "holiday_date"],
+		filters=filters,
+		order_by="holiday_date",
 	)
-
-	return holidays
 
 
 @erpnext.allow_regional
@@ -540,7 +536,6 @@ def calculate_hra_exemption_for_period(doc):
 
 
 def get_previous_claimed_amount(employee, payroll_period, non_pro_rata=False, component=False):
-	total_claimed_amount = 0
 	query = """
 	select sum(claimed_amount) as 'total_amount'
 	from `tabEmployee Benefit Claim`
@@ -563,9 +558,12 @@ def get_previous_claimed_amount(employee, payroll_period, non_pro_rata=False, co
 		},
 		as_dict=True,
 	)
-	if sum_of_claimed_amount and flt(sum_of_claimed_amount[0].total_amount) > 0:
-		total_claimed_amount = sum_of_claimed_amount[0].total_amount
-	return total_claimed_amount
+	return (
+		sum_of_claimed_amount[0].total_amount
+		if sum_of_claimed_amount
+		and flt(sum_of_claimed_amount[0].total_amount) > 0
+		else 0
+	)
 
 
 def share_doc_with_approver(doc, user):
@@ -579,9 +577,7 @@ def share_doc_with_approver(doc, user):
 			_("Shared with the user {0} with {1} access").format(user, frappe.bold("submit"), alert=True)
 		)
 
-	# remove shared doc if approver changes
-	doc_before_save = doc.get_doc_before_save()
-	if doc_before_save:
+	if doc_before_save := doc.get_doc_before_save():
 		approvers = {
 			"Leave Application": "leave_approver",
 			"Expense Claim": "expense_approver",

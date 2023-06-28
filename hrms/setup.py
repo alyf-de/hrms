@@ -587,13 +587,12 @@ def update_select_perm_after_install():
 
 def set_single_defaults():
 	for dt in ("HR Settings", "Payroll Settings"):
-		default_values = frappe.db.sql(
+		if default_values := frappe.db.sql(
 			"""
 			select fieldname, `default` from `tabDocField`
 			where parent=%s""",
 			dt,
-		)
-		if default_values:
+		):
 			try:
 				doc = frappe.get_doc(dt, dt)
 				for fieldname, value in default_values:

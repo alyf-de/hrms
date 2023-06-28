@@ -41,13 +41,12 @@ class EmployeeOnboarding(EmployeeBoardingController):
 			for activity in self.activities:
 				if not activity.required_for_employee_creation:
 					continue
-				else:
-					task_status = frappe.db.get_value("Task", activity.task, "status")
-					if task_status not in ["Completed", "Cancelled"]:
-						frappe.throw(
-							_("All the mandatory tasks for employee creation are not completed yet."),
-							IncompleteTaskError,
-						)
+				task_status = frappe.db.get_value("Task", activity.task, "status")
+				if task_status not in ["Completed", "Cancelled"]:
+					frappe.throw(
+						_("All the mandatory tasks for employee creation are not completed yet."),
+						IncompleteTaskError,
+					)
 
 	def on_submit(self):
 		super(EmployeeOnboarding, self).on_submit()

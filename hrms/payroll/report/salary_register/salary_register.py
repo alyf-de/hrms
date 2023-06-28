@@ -12,9 +12,7 @@ import erpnext
 def execute(filters=None):
 	if not filters:
 		filters = {}
-	currency = None
-	if filters.get("currency"):
-		currency = filters.get("currency")
+	currency = filters.get("currency") if filters.get("currency") else None
 	company_currency = erpnext.get_company_currency(filters.get("company"))
 	salary_slips = get_salary_slips(filters, company_currency)
 	if not salary_slips:
@@ -51,17 +49,13 @@ def execute(filters=None):
 		if ss.leave_without_pay is not None:
 			columns[9] = columns[9].replace("-1", "130")
 
-		for e in earning_types:
-			row.append(ss_earning_map.get(ss.name, {}).get(e))
-
+		row.extend(ss_earning_map.get(ss.name, {}).get(e) for e in earning_types)
 		if currency == company_currency:
 			row += [flt(ss.gross_pay) * flt(ss.exchange_rate)]
 		else:
 			row += [ss.gross_pay]
 
-		for d in ded_types:
-			row.append(ss_ded_map.get(ss.name, {}).get(d))
-
+		row.extend(ss_ded_map.get(ss.name, {}).get(d) for d in ded_types)
 		row.append(ss.total_loan_repayment)
 
 		if currency == company_currency:
@@ -112,27 +106,26 @@ def get_columns(salary_slips):
 
 	salary_components = {_("Earning"): [], _("Deduction"): []}
 
-	for component in frappe.db.sql(
-		"""select distinct sd.salary_component, sc.type
+	for component in frappe.db.sql("""select distinct sd.salary_component, sc.type
 		from `tabSalary Detail` sd, `tabSalary Component` sc
 		where sc.name=sd.salary_component and sd.amount != 0 and sd.parent in (%s)"""
-		% (", ".join(["%s"] * len(salary_slips))),
-		tuple([d.name for d in salary_slips]),
-		as_dict=1,
-	):
+		% (", ".join(["%s"] * len(salary_slips))), tuple(d.name for d in salary_slips), as_dict=1):
 		salary_components[_(component.type)].append(component.salary_component)
 
 	columns = (
-		columns
-		+ [(e + ":Currency:120") for e in salary_components[_("Earning")]]
-		+ [_("Gross Pay") + ":Currency:120"]
-		+ [(d + ":Currency:120") for d in salary_components[_("Deduction")]]
-		+ [
-			_("Loan Repayment") + ":Currency:120",
-			_("Total Deduction") + ":Currency:120",
-			_("Net Pay") + ":Currency:120",
-		]
-	)
+		(
+			(
+				columns
+				+ [f"{e}:Currency:120" for e in salary_components[_("Earning")]]
+			)
+			+ [_("Gross Pay") + ":Currency:120"]
+		)
+		+ [f"{d}:Currency:120" for d in salary_components[_("Deduction")]]
+	) + [
+		_("Loan Repayment") + ":Currency:120",
+		_("Total Deduction") + ":Currency:120",
+		_("Net Pay") + ":Currency:120",
+	]
 
 	return columns, salary_components[_("Earning")], salary_components[_("Deduction")]
 
@@ -190,7 +183,7 @@ def get_ss_earning_map(salary_slips, currency, company_currency):
 		"""select sd.parent, sd.salary_component, sd.amount, ss.exchange_rate, ss.name
 		from `tabSalary Detail` sd, `tabSalary Slip` ss where sd.parent=ss.name and sd.parent in (%s)"""
 		% (", ".join(["%s"] * len(salary_slips))),
-		tuple([d.name for d in salary_slips]),
+		tuple(d.name for d in salary_slips),
 		as_dict=1,
 	)
 
@@ -212,7 +205,7 @@ def get_ss_ded_map(salary_slips, currency, company_currency):
 		"""select sd.parent, sd.salary_component, sd.amount, ss.exchange_rate, ss.name
 		from `tabSalary Detail` sd, `tabSalary Slip` ss where sd.parent=ss.name and sd.parent in (%s)"""
 		% (", ".join(["%s"] * len(salary_slips))),
-		tuple([d.name for d in salary_slips]),
+		tuple(d.name for d in salary_slips),
 		as_dict=1,
 	)
 

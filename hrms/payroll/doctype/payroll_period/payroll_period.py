@@ -30,9 +30,9 @@ class PayrollPeriod(Document):
 			"""
 		if not self.name:
 			# hack! if name is null, it could cause problems with !=
-			self.name = "New " + self.doctype
+			self.name = f"New {self.doctype}"
 
-		overlap_doc = frappe.db.sql(
+		if overlap_doc := frappe.db.sql(
 			query.format(self.doctype),
 			{
 				"start_date": self.start_date,
@@ -41,9 +41,7 @@ class PayrollPeriod(Document):
 				"company": self.company,
 			},
 			as_dict=1,
-		)
-
-		if overlap_doc:
+		):
 			msg = (
 				_("A {0} exists between {1} and {2} (").format(
 					self.doctype, formatdate(self.start_date), formatdate(self.end_date)

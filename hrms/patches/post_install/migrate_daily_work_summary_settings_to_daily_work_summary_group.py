@@ -28,7 +28,7 @@ def execute():
 					new_group = frappe.get_doc(
 						dict(
 							doctype="Daily Work Summary Group",
-							name="Daily Work Summary for " + d.company,
+							name=f"Daily Work Summary for {d.company}",
 							users=users,
 							send_emails_at=d.send_emails_at,
 							subject=previous_setting["subject"],
@@ -44,12 +44,10 @@ def execute():
 
 
 def get_previous_setting():
-	obj = {}
 	setting_data = frappe.db.sql(
 		"select field, value from tabSingles where doctype='Daily Work Summary Settings'"
 	)
-	for field, value in setting_data:
-		obj[field] = value
+	obj = dict(setting_data)
 	obj["companies"] = get_setting_companies()
 	return obj
 

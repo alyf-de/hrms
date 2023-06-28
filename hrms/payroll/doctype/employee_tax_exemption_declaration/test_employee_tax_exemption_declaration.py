@@ -412,21 +412,19 @@ class TestEmployeeTaxExemptionDeclaration(FrappeTestCase):
 def create_payroll_period(**args):
 	args = frappe._dict(args)
 	name = args.name or "_Test Payroll Period"
-	if not frappe.db.exists("Payroll Period", name):
-		from datetime import date
-
-		payroll_period = frappe.get_doc(
-			dict(
-				doctype="Payroll Period",
-				name=name,
-				company=args.company or erpnext.get_default_company(),
-				start_date=args.start_date or date(date.today().year, 1, 1),
-				end_date=args.end_date or date(date.today().year, 12, 31),
-			)
-		).insert()
-		return payroll_period
-	else:
+	if frappe.db.exists("Payroll Period", name):
 		return frappe.get_doc("Payroll Period", name)
+	from datetime import date
+
+	return frappe.get_doc(
+		dict(
+			doctype="Payroll Period",
+			name=name,
+			company=args.company or erpnext.get_default_company(),
+			start_date=args.start_date or date(date.today().year, 1, 1),
+			end_date=args.end_date or date(date.today().year, 12, 31),
+		)
+	).insert()
 
 
 def create_exemption_category():

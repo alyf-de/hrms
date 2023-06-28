@@ -21,10 +21,7 @@ class TestDailyWorkSummary(unittest.TestCase):
 				)
 
 	def test_email_trigger_failed(self):
-		hour = "00:00"
-		if frappe.utils.nowtime().split(":")[0] == "00":
-			hour = "01:00"
-
+		hour = "01:00" if frappe.utils.nowtime().split(":")[0] == "00" else "00:00"
 		self.setup_and_prepare_test(hour)
 
 		for d in self.users:
@@ -87,7 +84,7 @@ class TestDailyWorkSummary(unittest.TestCase):
 		# setup email to trigger at this hour
 		if not hour:
 			hour = frappe.utils.nowtime().split(":")[0]
-			hour = hour + ":00"
+			hour = f"{hour}:00"
 
 		groups = frappe.get_doc(
 			dict(

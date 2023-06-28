@@ -23,7 +23,7 @@ class LeaveLedgerEntry(Document):
 
 def validate_leave_allocation_against_leave_application(ledger):
 	"""Checks that leave allocation has no leave application against it"""
-	leave_application_records = frappe.db.sql_list(
+	if leave_application_records := frappe.db.sql_list(
 		"""
 		SELECT transaction_name
 		FROM `tabLeave Ledger Entry`
@@ -35,9 +35,7 @@ def validate_leave_allocation_against_leave_application(ledger):
 			AND to_date<=%s
 	""",
 		(ledger.employee, ledger.leave_type, ledger.from_date, ledger.to_date),
-	)
-
-	if leave_application_records:
+	):
 		frappe.throw(
 			_("Leave allocation {0} is linked with the Leave Application {1}").format(
 				ledger.transaction_name, ", ".join(leave_application_records)
@@ -100,7 +98,7 @@ def get_previous_expiry_ledger_entry(ledger):
 	return frappe.db.get_value(
 		"Leave Ledger Entry",
 		filters={
-			"creation": ("like", creation_date + "%"),
+			"creation": ("like", f"{creation_date}%"),
 			"employee": ledger.employee,
 			"leave_type": ledger.leave_type,
 			"is_expired": 1,
@@ -126,8 +124,7 @@ def process_expired_allocation():
 
 	leave_type = [record[0] for record in leave_type_records] or [""]
 
-	# fetch non expired leave ledger entry of transaction_type allocation
-	expire_allocation = frappe.db.sql(
+	if expire_allocation := frappe.db.sql(
 		"""
 		SELECT
 			leaves, to_date, employee, leave_type,
@@ -149,9 +146,7 @@ def process_expired_allocation():
 			AND to_date < %s""",
 		(leave_type, today()),
 		as_dict=1,
-	)
-
-	if expire_allocation:
+	):
 		create_expiry_ledger_entry(expire_allocation)
 
 

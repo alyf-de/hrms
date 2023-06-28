@@ -18,14 +18,12 @@ class LeaveControlPanel(Document):
 
 		condition_str = " and " + " and ".join(conditions) if len(conditions) else ""
 
-		e = frappe.db.sql(
+		return frappe.db.sql(
 			"select name from tabEmployee where status='Active' {condition}".format(
 				condition=condition_str
 			),
 			tuple(values),
 		)
-
-		return e
 
 	def validate_values(self):
 		for f in ["from_date", "to_date", "leave_type", "no_of_days"]:

@@ -28,7 +28,7 @@ test_dependencies = ["Fiscal Year"]
 class TestSalaryStructure(FrappeTestCase):
 	def setUp(self):
 		for dt in ["Salary Slip", "Salary Structure", "Salary Structure Assignment"]:
-			frappe.db.sql("delete from `tab%s`" % dt)
+			frappe.db.sql(f"delete from `tab{dt}`")
 
 		self.make_holiday_list()
 		frappe.db.set_value(
@@ -192,7 +192,7 @@ def make_salary_structure(
 		"currency": currency,
 	}
 	if other_details and isinstance(other_details, dict):
-		details.update(other_details)
+		details |= other_details
 	salary_structure_doc = frappe.get_doc(details)
 	salary_structure_doc.insert()
 	if not dont_submit:

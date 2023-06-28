@@ -78,7 +78,7 @@ class IncomeTaxComputationReport(object):
 		if self.filters.employee:
 			filters = {"name": self.filters.employee}
 		elif self.filters.department:
-			filters.update({"department": self.filters.department})
+			filters["department"] = self.filters.department
 
 		return filters, or_filters
 
@@ -153,19 +153,20 @@ class IncomeTaxComputationReport(object):
 				ss_start_date = add_days(ss_end_date, 1)
 
 	def get_last_salary_slip(self, employee):
-		last_salary_slip = frappe.db.get_value(
+		return frappe.db.get_value(
 			"Salary Slip",
 			{
 				"employee": employee,
 				"docstatus": 1,
-				"start_date": ["between", [self.payroll_period_start_date, self.payroll_period_end_date]],
+				"start_date": [
+					"between",
+					[self.payroll_period_start_date, self.payroll_period_end_date],
+				],
 			},
 			["start_date", "end_date", "salary_structure", "payroll_frequency"],
 			order_by="start_date desc",
 			as_dict=1,
 		)
-
-		return last_salary_slip
 
 	def get_ctc(self):
 		# Get total earnings from existing salary slip
@@ -420,8 +421,7 @@ class IncomeTaxComputationReport(object):
 		)
 
 		for emp, emp_details in self.employees.items():
-			tax_slab = emp_details.get("income_tax_slab")
-			if tax_slab:
+			if tax_slab := emp_details.get("income_tax_slab"):
 				tax_slab = frappe.get_cached_doc("Income Tax Slab", tax_slab)
 				employee_dict = frappe.get_doc("Employee", emp).as_dict()
 				tax_amount = calculate_tax_by_tax_slab(

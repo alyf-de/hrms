@@ -121,11 +121,7 @@ class LeaveAllocation(Document):
 			},
 			pluck="leaves",
 		)
-		total_existing_leaves = 0
-		for entry in ledger_entries:
-			total_existing_leaves += entry
-
-		return total_existing_leaves
+		return sum(ledger_entries)
 
 	def validate_against_leave_applications(self):
 		leaves_taken = get_approved_leaves_for_period(
@@ -167,7 +163,7 @@ class LeaveAllocation(Document):
 			)
 
 	def validate_allocation_overlap(self):
-		leave_allocation = frappe.db.sql(
+		if leave_allocation := frappe.db.sql(
 			"""
 			SELECT
 				name
@@ -177,9 +173,7 @@ class LeaveAllocation(Document):
 				AND name <> %s AND docstatus=1
 				AND to_date >= %s AND from_date <= %s""",
 			(self.employee, self.leave_type, self.name, self.from_date, self.to_date),
-		)
-
-		if leave_allocation:
+		):
 			frappe.msgprint(
 				_("{0} already allocated for Employee {1} for period {2} to {3}").format(
 					self.leave_type, self.employee, formatdate(self.from_date), formatdate(self.to_date)
@@ -193,15 +187,13 @@ class LeaveAllocation(Document):
 			)
 
 	def validate_back_dated_allocation(self):
-		future_allocation = frappe.db.sql(
+		if future_allocation := frappe.db.sql(
 			"""select name, from_date from `tabLeave Allocation`
 			where employee=%s and leave_type=%s and docstatus=1 and from_date > %s
 			and carry_forward=1""",
 			(self.employee, self.leave_type, self.to_date),
 			as_dict=1,
-		)
-
-		if future_allocation:
+		):
 			frappe.throw(
 				_(
 					"Leave cannot be allocated before {0}, as leave balance has already been carry-forwarded in the future leave allocation record {1}"

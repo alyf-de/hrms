@@ -49,11 +49,9 @@ class Attendance(Document):
 			frappe.throw(_("Attendance date can not be less than employee's joining date"))
 
 	def validate_duplicate_record(self):
-		duplicate = get_duplicate_attendance_record(
+		if duplicate := get_duplicate_attendance_record(
 			self.employee, self.attendance_date, self.shift, self.name
-		)
-
-		if duplicate:
+		):
 			frappe.throw(
 				_("Attendance for employee {0} is already marked for the date {1}: {2}").format(
 					frappe.bold(self.employee),
@@ -65,11 +63,9 @@ class Attendance(Document):
 			)
 
 	def validate_overlapping_shift_attendance(self):
-		attendance = get_overlapping_shift_attendance(
+		if attendance := get_overlapping_shift_attendance(
 			self.employee, self.attendance_date, self.shift, self.name
-		)
-
-		if attendance:
+		):
 			frappe.throw(
 				_("Attendance for employee {0} is already marked for an overlapping shift {1}: {2}").format(
 					frappe.bold(self.employee),
@@ -132,15 +128,13 @@ class Attendance(Document):
 
 	def unlink_attendance_from_checkins(self):
 		EmployeeCheckin = frappe.qb.DocType("Employee Checkin")
-		linked_logs = (
+		if linked_logs := (
 			frappe.qb.from_(EmployeeCheckin)
 			.select(EmployeeCheckin.name)
 			.where(EmployeeCheckin.attendance == self.name)
 			.for_update()
 			.run(as_dict=True)
-		)
-
-		if linked_logs:
+		):
 			(
 				frappe.qb.update(EmployeeCheckin)
 				.set("attendance", "")
@@ -359,7 +353,7 @@ def get_unmarked_days(employee, month, exclude_holidays=0):
 		end_day = relieving_date.day + 1
 
 	dates_of_month = [
-		"{}-{}-{}".format(today.year, month_map[month], r) for r in range(start_day, end_day)
+		f"{today.year}-{month_map[month]}-{r}" for r in range(start_day, end_day)
 	]
 	month_start, month_end = dates_of_month[0], dates_of_month[-1]
 

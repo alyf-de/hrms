@@ -11,10 +11,9 @@ from erpnext.setup.doctype.employee.employee import Employee
 
 class EmployeeMaster(Employee):
 	def autoname(self):
-		naming_method = frappe.db.get_value("HR Settings", None, "emp_created_by")
-		if not naming_method:
-			frappe.throw(_("Please setup Employee Naming System in Human Resource > HR Settings"))
-		else:
+		if naming_method := frappe.db.get_value(
+			"HR Settings", None, "emp_created_by"
+		):
 			if naming_method == "Naming Series":
 				set_name_by_naming_series(self)
 			elif naming_method == "Employee Number":
@@ -23,6 +22,8 @@ class EmployeeMaster(Employee):
 				self.set_employee_name()
 				self.name = self.employee_name
 
+		else:
+			frappe.throw(_("Please setup Employee Naming System in Human Resource > HR Settings"))
 		self.employee = self.name
 
 
@@ -31,15 +32,14 @@ def validate_onboarding_process(doc, method=None):
 	if not doc.job_applicant:
 		return
 
-	employee_onboarding = frappe.get_all(
+	if employee_onboarding := frappe.get_all(
 		"Employee Onboarding",
 		filters={
 			"job_applicant": doc.job_applicant,
 			"docstatus": 1,
 			"boarding_status": ("!=", "Completed"),
 		},
-	)
-	if employee_onboarding:
+	):
 		onboarding = frappe.get_doc("Employee Onboarding", employee_onboarding[0].name)
 		onboarding.validate_employee_creation()
 		onboarding.db_set("employee", doc.name)
@@ -83,11 +83,8 @@ def get_timeline_data(doctype, name):
 	"""Return timeline for attendance"""
 	from frappe.desk.notifications import get_open_count
 
-	out = {}
-
 	open_count = get_open_count(doctype, name)
-	out["count"] = open_count["count"]
-
+	out = {"count": open_count["count"]}
 	timeline_data = dict(
 		frappe.db.sql(
 			"""

@@ -38,8 +38,7 @@ class EmployeeTaxExemptionProofSubmission(Document):
 	def calculate_hra_exemption(self):
 		self.monthly_hra_exemption, self.monthly_house_rent, self.total_eligible_hra_exemption = 0, 0, 0
 		if self.get("house_rent_payment_amount"):
-			hra_exemption = calculate_hra_exemption_for_period(self)
-			if hra_exemption:
+			if hra_exemption := calculate_hra_exemption_for_period(self):
 				self.exemption_amount += hra_exemption["total_eligible_hra_exemption"]
 				self.exemption_amount = flt(self.exemption_amount, self.precision("exemption_amount"))
 				self.monthly_hra_exemption = flt(

@@ -18,9 +18,7 @@ def execute(filters=None):
 	parameters_result = get_parameters(filters)
 	parameters = []
 	if parameters_result:
-		for department in parameters_result:
-			parameters.append(department)
-
+		parameters.extend(iter(parameters_result))
 	chart = get_chart_data(parameters, employees, filters)
 	return columns, employees, None, chart
 
@@ -63,7 +61,7 @@ def get_parameters(filters):
 	else:
 		parameter = filters.get("parameter")
 
-	return frappe.db.sql("""select name from `tab""" + parameter + """` """, as_list=1)
+	return frappe.db.sql(f"""select name from `tab{parameter}` """, as_list=1)
 
 
 def get_chart_data(parameters, employees, filters):
@@ -94,6 +92,10 @@ def get_chart_data(parameters, employees, filters):
 	label.append(["Not Set"])
 	values.append(others)
 
-	chart = {"data": {"labels": label, "datasets": [{"name": "Employees", "values": values}]}}
-	chart["type"] = "donut"
-	return chart
+	return {
+		"data": {
+			"labels": label,
+			"datasets": [{"name": "Employees", "values": values}],
+		},
+		"type": "donut",
+	}

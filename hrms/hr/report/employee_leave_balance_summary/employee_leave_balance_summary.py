@@ -27,9 +27,7 @@ def get_columns(leave_types):
 		_("Department") + ":Link/Department:150",
 	]
 
-	for leave_type in leave_types:
-		columns.append(_(leave_type) + ":Float:160")
-
+	columns.extend(f"{_(leave_type)}:Float:160" for leave_type in leave_types)
 	return columns
 
 
@@ -38,11 +36,11 @@ def get_conditions(filters):
 		"company": filters.company,
 	}
 	if filters.get("employee_status"):
-		conditions.update({"status": filters.get("employee_status")})
+		conditions["status"] = filters.get("employee_status")
 	if filters.get("department"):
-		conditions.update({"department": filters.get("department")})
+		conditions["department"] = filters.get("department")
 	if filters.get("employee"):
-		conditions.update({"employee": filters.get("employee")})
+		conditions["employee"] = filters.get("employee")
 
 	return conditions
 

@@ -166,69 +166,65 @@ class ExpenseClaim(AccountsController):
 			)
 
 		# expense entries
-		for data in self.expenses:
-			gl_entry.append(
-				self.get_gl_dict(
-					{
-						"account": data.default_account,
-						"debit": data.sanctioned_amount,
-						"debit_in_account_currency": data.sanctioned_amount,
-						"against": self.employee,
-						"cost_center": data.cost_center or self.cost_center,
-					},
-					item=data,
-				)
+		gl_entry.extend(
+			self.get_gl_dict(
+				{
+					"account": data.default_account,
+					"debit": data.sanctioned_amount,
+					"debit_in_account_currency": data.sanctioned_amount,
+					"against": self.employee,
+					"cost_center": data.cost_center or self.cost_center,
+				},
+				item=data,
 			)
-
-		for data in self.advances:
-			gl_entry.append(
-				self.get_gl_dict(
-					{
-						"account": data.advance_account,
-						"credit": data.allocated_amount,
-						"credit_in_account_currency": data.allocated_amount,
-						"against": ",".join([d.default_account for d in self.expenses]),
-						"party_type": "Employee",
-						"party": self.employee,
-						"against_voucher_type": "Employee Advance",
-						"against_voucher": data.employee_advance,
-					}
-				)
+			for data in self.expenses
+		)
+		gl_entry.extend(
+			self.get_gl_dict(
+				{
+					"account": data.advance_account,
+					"credit": data.allocated_amount,
+					"credit_in_account_currency": data.allocated_amount,
+					"against": ",".join([d.default_account for d in self.expenses]),
+					"party_type": "Employee",
+					"party": self.employee,
+					"against_voucher_type": "Employee Advance",
+					"against_voucher": data.employee_advance,
+				}
 			)
-
+			for data in self.advances
+		)
 		self.add_tax_gl_entries(gl_entry)
 
 		if self.is_paid and self.grand_total:
 			# payment entry
 			payment_account = get_bank_cash_account(self.mode_of_payment, self.company).get("account")
-			gl_entry.append(
-				self.get_gl_dict(
-					{
-						"account": payment_account,
-						"credit": self.grand_total,
-						"credit_in_account_currency": self.grand_total,
-						"against": self.employee,
-					},
-					item=self,
+			gl_entry.extend(
+				(
+					self.get_gl_dict(
+						{
+							"account": payment_account,
+							"credit": self.grand_total,
+							"credit_in_account_currency": self.grand_total,
+							"against": self.employee,
+						},
+						item=self,
+					),
+					self.get_gl_dict(
+						{
+							"account": self.payable_account,
+							"party_type": "Employee",
+							"party": self.employee,
+							"against": payment_account,
+							"debit": self.grand_total,
+							"debit_in_account_currency": self.grand_total,
+							"against_voucher": self.name,
+							"against_voucher_type": self.doctype,
+						},
+						item=self,
+					),
 				)
 			)
-
-			gl_entry.append(
-				self.get_gl_dict(
-					{
-						"account": self.payable_account,
-						"party_type": "Employee",
-						"party": self.employee,
-						"against": payment_account,
-						"debit": self.grand_total,
-						"debit_in_account_currency": self.grand_total,
-						"against_voucher": self.name,
-						"against_voucher_type": self.doctype,
-					},
-					item=self,
-				)
-			)
-
 		return gl_entry
 
 	def add_tax_gl_entries(self, gl_entries):
@@ -349,18 +345,17 @@ def get_total_reimbursed_amount(doc):
 	if doc.is_paid:
 		# No need to check for cancelled state here as it will anyways update status as cancelled
 		return doc.grand_total
-	else:
-		amount_via_jv = frappe.db.get_value(
-			"Journal Entry Account",
-			{"reference_name": doc.name, "docstatus": 1},
-			"sum(debit_in_account_currency - credit_in_account_currency)",
-		)
+	amount_via_jv = frappe.db.get_value(
+		"Journal Entry Account",
+		{"reference_name": doc.name, "docstatus": 1},
+		"sum(debit_in_account_currency - credit_in_account_currency)",
+	)
 
-		amount_via_payment_entry = frappe.db.get_value(
-			"Payment Entry Reference", {"reference_name": doc.name, "docstatus": 1}, "sum(allocated_amount)"
-		)
+	amount_via_payment_entry = frappe.db.get_value(
+		"Payment Entry Reference", {"reference_name": doc.name, "docstatus": 1}, "sum(allocated_amount)"
+	)
 
-		return flt(amount_via_jv) + flt(amount_via_payment_entry)
+	return flt(amount_via_jv) + flt(amount_via_payment_entry)
 
 
 def get_outstanding_amount_for_claim(claim):
@@ -377,14 +372,12 @@ def get_outstanding_amount_for_claim(claim):
 			as_dict=True,
 		)
 
-	outstanding_amt = (
+	return (
 		flt(claim.total_sanctioned_amount)
 		+ flt(claim.total_taxes_and_charges)
 		- flt(claim.total_amount_reimbursed)
 		- flt(claim.total_advance_amount)
 	)
-
-	return outstanding_amt
 
 
 @frappe.whitelist()
@@ -401,7 +394,7 @@ def make_bank_entry(dt, dn):
 	je = frappe.new_doc("Journal Entry")
 	je.voucher_type = "Bank Entry"
 	je.company = expense_claim.company
-	je.remark = "Payment against Expense Claim: " + dn
+	je.remark = f"Payment against Expense Claim: {dn}"
 
 	je.append(
 		"accounts",
@@ -522,10 +515,7 @@ def update_payment_for_expense_claim(doc, method=None):
 	for d in doc.get(payment_table):
 		if d.get(doctype_field) == "Expense Claim" and d.reference_name:
 			expense_claim = frappe.get_doc("Expense Claim", d.reference_name)
-			if doc.docstatus == 2:
-				update_reimbursed_amount(expense_claim)
-			else:
-				update_reimbursed_amount(expense_claim)
+			update_reimbursed_amount(expense_claim)
 
 
 def validate_expense_claim_in_jv(doc, method=None):
@@ -543,11 +533,14 @@ def validate_expense_claim_in_jv(doc, method=None):
 
 @frappe.whitelist()
 def make_expense_claim_for_delivery_trip(source_name, target_doc=None):
-	doc = get_mapped_doc(
+	return get_mapped_doc(
 		"Delivery Trip",
 		source_name,
-		{"Delivery Trip": {"doctype": "Expense Claim", "field_map": {"name": "delivery_trip"}}},
+		{
+			"Delivery Trip": {
+				"doctype": "Expense Claim",
+				"field_map": {"name": "delivery_trip"},
+			}
+		},
 		target_doc,
 	)
-
-	return doc

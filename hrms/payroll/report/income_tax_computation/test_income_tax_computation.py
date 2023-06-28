@@ -102,15 +102,13 @@ class TestIncomeTaxComputation(unittest.TestCase):
 
 		result = execute(filters)
 
-		expected_data.update(
-			{
-				"_test_category": 100000.0,
-				"total_exemption": 152400.0,
-				"total_taxable_amount": 783600.0,
-				"applicable_tax": 71989.0,
-				"payable_tax": 53992.0,
-			}
-		)
+		expected_data |= {
+			"_test_category": 100000.0,
+			"total_exemption": 152400.0,
+			"total_taxable_amount": 783600.0,
+			"applicable_tax": 71989.0,
+			"payable_tax": 53992.0,
+		}
 
 		for key, val in expected_data.items():
 			self.assertEqual(result[1][0].get(key), val)

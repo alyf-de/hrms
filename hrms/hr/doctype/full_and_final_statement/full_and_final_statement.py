@@ -139,7 +139,7 @@ class FullandFinalStatement(Document):
 		jv.append(
 			"accounts",
 			{
-				"credit_in_account_currency": difference if difference > 0 else 0,
+				"credit_in_account_currency": max(difference, 0),
 				"debit_in_account_currency": -(difference) if difference < 0 else 0,
 				"reference_type": self.doctype,
 				"reference_name": self.name,

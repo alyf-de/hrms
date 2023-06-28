@@ -70,7 +70,9 @@ def get_columns():
 def get_data(filters):
 	data = []
 	staffing_plan_details = get_staffing_plan(filters)
-	staffing_plan_list = list(set([details["name"] for details in staffing_plan_details]))
+	staffing_plan_list = list(
+		{details["name"] for details in staffing_plan_details}
+	)
 	sp_jo_map, jo_list = get_job_opening(staffing_plan_list)
 	jo_ja_map, ja_list = get_job_applicant(jo_list)
 	ja_joff_map = get_job_offer(ja_list)
@@ -119,7 +121,7 @@ def get_child_row(jo, jo_ja_map, ja_joff_map):
 
 def get_staffing_plan(filters):
 
-	staffing_plan = frappe.db.sql(
+	return frappe.db.sql(
 		"""
 	select
 		sp.name, sp.department, spd.designation, spd.vacancies, spd.current_count, spd.parent, sp.to_date
@@ -135,8 +137,6 @@ def get_staffing_plan(filters):
 		as_dict=1,
 	)
 
-	return staffing_plan
-
 
 def get_job_opening(sp_list):
 
@@ -148,11 +148,11 @@ def get_job_opening(sp_list):
 	jo_list = []
 
 	for openings in job_openings:
-		if openings.staffing_plan not in sp_jo_map.keys():
-			sp_jo_map[openings.staffing_plan] = [openings]
-		else:
+		if openings.staffing_plan in sp_jo_map:
 			sp_jo_map[openings.staffing_plan].append(openings)
 
+		else:
+			sp_jo_map[openings.staffing_plan] = [openings]
 		jo_list.append(openings.name)
 
 	return sp_jo_map, jo_list
@@ -170,11 +170,11 @@ def get_job_applicant(jo_list):
 	)
 
 	for applicant in applicants:
-		if applicant.job_title not in jo_ja_map.keys():
-			jo_ja_map[applicant.job_title] = [applicant]
-		else:
+		if applicant.job_title in jo_ja_map:
 			jo_ja_map[applicant.job_title].append(applicant)
 
+		else:
+			jo_ja_map[applicant.job_title] = [applicant]
 		ja_list.append(applicant.name)
 
 	return jo_ja_map, ja_list
@@ -190,9 +190,9 @@ def get_job_offer(ja_list):
 	)
 
 	for offer in offers:
-		if offer.job_applicant not in ja_joff_map.keys():
-			ja_joff_map[offer.job_applicant] = [offer]
-		else:
+		if offer.job_applicant in ja_joff_map:
 			ja_joff_map[offer.job_applicant].append(offer)
 
+		else:
+			ja_joff_map[offer.job_applicant] = [offer]
 	return ja_joff_map

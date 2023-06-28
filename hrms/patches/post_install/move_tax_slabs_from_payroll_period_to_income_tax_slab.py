@@ -48,13 +48,9 @@ def execute():
 
 		for i, period in enumerate(payroll_periods):
 			income_tax_slab = frappe.new_doc("Income Tax Slab")
-			income_tax_slab.name = "Tax Slab:" + period.name
+			income_tax_slab.name = f"Tax Slab:{period.name}"
 
-			if i == 0:
-				income_tax_slab.disabled = 0
-			else:
-				income_tax_slab.disabled = 1
-
+			income_tax_slab.disabled = 0 if i == 0 else 1
 			income_tax_slab.effective_from = period.start_date
 			income_tax_slab.company = company.name
 			income_tax_slab.allow_tax_exemption = 1

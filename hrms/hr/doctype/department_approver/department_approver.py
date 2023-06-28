@@ -78,7 +78,7 @@ def get_approvers(doctype, txt, searchfield, start, page_len, filters):
 				and user.name like %s
 				and approver.parentfield = %s
 				and approver.approver=user.name""",
-				(d, "%" + txt + "%", parentfield),
+				(d, f"%{txt}%", parentfield),
 				as_list=True,
 			)
 
@@ -88,6 +88,6 @@ def get_approvers(doctype, txt, searchfield, start, page_len, filters):
 		)
 		if department_list:
 			error_msg += " " + _("or for Department: {0}").format(frappe.bold(employee_department))
-		frappe.throw(error_msg, title=_(field_name + " Missing"))
+		frappe.throw(error_msg, title=_(f"{field_name} Missing"))
 
-	return set(tuple(approver) for approver in approvers)
+	return {tuple(approver) for approver in approvers}

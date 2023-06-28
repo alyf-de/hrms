@@ -32,7 +32,7 @@ from erpnext.setup.doctype.employee.employee import get_holiday_list_for_employe
 
 class PayrollEntry(Document):
 	def onload(self):
-		if not self.docstatus == 1 or self.salary_slips_submitted:
+		if self.docstatus != 1 or self.salary_slips_submitted:
 			return
 
 		# check if salary slips were manually submitted
@@ -65,8 +65,9 @@ class PayrollEntry(Document):
 			self.status = status
 
 	def validate_employee_details(self):
-		emp_with_sal_slip = []
-		for employee_details in self.employees:
+		emp_with_sal_slip = [
+			employee_details.employee
+			for employee_details in self.employees
 			if frappe.db.exists(
 				"Salary Slip",
 				{
@@ -75,9 +76,8 @@ class PayrollEntry(Document):
 					"end_date": self.end_date,
 					"docstatus": 1,
 				},
-			):
-				emp_with_sal_slip.append(employee_details.employee)
-
+			)
+		]
 		if len(emp_with_sal_slip):
 			frappe.throw(_("Salary Slip already exists for {0}").format(comma_and(emp_with_sal_slip)))
 
@@ -119,10 +119,12 @@ class PayrollEntry(Document):
 				"payroll_frequency": self.payroll_frequency
 			}
 
-		sal_struct = get_sal_struct(
-			self.company, self.currency, self.salary_slip_based_on_timesheet, condition
-		)
-		if sal_struct:
+		if sal_struct := get_sal_struct(
+			self.company,
+			self.currency,
+			self.salary_slip_based_on_timesheet,
+			condition,
+		):
 			cond += "and t2.salary_structure IN %(sal_struct)s "
 			cond += "and t2.payroll_payable_account = %(payroll_payable_account)s "
 			cond += "and %(from_date)s >= t2.from_date"
@@ -181,8 +183,7 @@ class PayrollEntry(Document):
 		Creates salary slip for selected employees if already not created
 		"""
 		self.check_permission("write")
-		employees = [emp.employee for emp in self.employees]
-		if employees:
+		if employees := [emp.employee for emp in self.employees]:
 			args = frappe._dict(
 				{
 					"salary_slip_based_on_timesheet": self.salary_slip_based_on_timesheet,
@@ -223,7 +224,7 @@ class PayrollEntry(Document):
 		"""
 
 		ss = frappe.qb.DocType("Salary Slip")
-		ss_list = (
+		return (
 			frappe.qb.from_(ss)
 			.select(ss.name, ss.salary_structure)
 			.where(
@@ -232,11 +233,12 @@ class PayrollEntry(Document):
 				& (ss.end_date <= self.end_date)
 				& (ss.payroll_entry == self.name)
 				& ((ss.journal_entry.isnull()) | (ss.journal_entry == ""))
-				& (Coalesce(ss.salary_slip_based_on_timesheet, 0) == self.salary_slip_based_on_timesheet)
+				& (
+					Coalesce(ss.salary_slip_based_on_timesheet, 0)
+					== self.salary_slip_based_on_timesheet
+				)
 			)
 		).run(as_dict=as_dict)
-
-		return ss_list
 
 	@frappe.whitelist()
 	def submit_salary_slips(self):
@@ -297,42 +299,43 @@ class PayrollEntry(Document):
 			return salary_components
 
 	def get_salary_component_total(self, component_type=None):
-		salary_components = self.get_salary_components(component_type)
-		if salary_components:
-			component_dict = {}
-			self.employee_cost_centers = {}
-			for item in salary_components:
-				employee_cost_centers = self.get_payroll_cost_centers_for_employee(
-					item.employee, item.salary_structure
+		if not (salary_components := self.get_salary_components(component_type)):
+			return
+		component_dict = {}
+		self.employee_cost_centers = {}
+		for item in salary_components:
+			employee_cost_centers = self.get_payroll_cost_centers_for_employee(
+				item.employee, item.salary_structure
+			)
+
+			add_component_to_accrual_jv_entry = True
+			if component_type == "earnings":
+				is_flexible_benefit, only_tax_impact = frappe.get_cached_value(
+					"Salary Component", item["salary_component"], ["is_flexible_benefit", "only_tax_impact"]
 				)
+				if is_flexible_benefit == 1 and only_tax_impact == 1:
+					add_component_to_accrual_jv_entry = False
 
-				add_component_to_accrual_jv_entry = True
-				if component_type == "earnings":
-					is_flexible_benefit, only_tax_impact = frappe.get_cached_value(
-						"Salary Component", item["salary_component"], ["is_flexible_benefit", "only_tax_impact"]
+			if add_component_to_accrual_jv_entry:
+				for cost_center, percentage in employee_cost_centers.items():
+					amount_against_cost_center = flt(item.amount) * percentage / 100
+					component_dict[(item.salary_component, cost_center)] = (
+						component_dict.get((item.salary_component, cost_center), 0) + amount_against_cost_center
 					)
-					if is_flexible_benefit == 1 and only_tax_impact == 1:
-						add_component_to_accrual_jv_entry = False
 
-				if add_component_to_accrual_jv_entry:
-					for cost_center, percentage in employee_cost_centers.items():
-						amount_against_cost_center = flt(item.amount) * percentage / 100
-						component_dict[(item.salary_component, cost_center)] = (
-							component_dict.get((item.salary_component, cost_center), 0) + amount_against_cost_center
-						)
-
-			account_details = self.get_account(component_dict=component_dict)
-			return account_details
+		return self.get_account(component_dict=component_dict)
 
 	def get_payroll_cost_centers_for_employee(self, employee, salary_structure):
 		if not self.employee_cost_centers.get(employee):
-			ss_assignment_name = frappe.db.get_value(
+			if ss_assignment_name := frappe.db.get_value(
 				"Salary Structure Assignment",
-				{"employee": employee, "salary_structure": salary_structure, "docstatus": 1},
+				{
+					"employee": employee,
+					"salary_structure": salary_structure,
+					"docstatus": 1,
+				},
 				"name",
-			)
-
-			if ss_assignment_name:
+			):
 				cost_centers = dict(
 					frappe.get_all(
 						"Employee Cost Center",
@@ -379,16 +382,15 @@ class PayrollEntry(Document):
 			journal_entry.user_remark = _("Accrual Journal Entry for salaries from {0} to {1}").format(
 				self.start_date, self.end_date
 			)
-			journal_entry.company = self.company
 			journal_entry.posting_date = self.posting_date
+			journal_entry.company = self.company
 			accounting_dimensions = get_accounting_dimensions() or []
+
+			company_currency = erpnext.get_company_currency(self.company)
 
 			accounts = []
 			currencies = []
 			payable_amount = 0
-			multi_currency = 0
-			company_currency = erpnext.get_company_currency(self.company)
-
 			# Earnings
 			for acc_cc, amount in earnings.items():
 				exchange_rate, amt = self.get_amount_and_exchange_rate_for_journal_entry(
@@ -446,8 +448,7 @@ class PayrollEntry(Document):
 			)
 
 			journal_entry.set("accounts", accounts)
-			if len(currencies) > 1:
-				multi_currency = 1
+			multi_currency = 1 if len(currencies) > 1 else 0
 			journal_entry.multi_currency = multi_currency
 			journal_entry.title = payroll_payable_account
 			journal_entry.save()
@@ -533,16 +534,14 @@ class PayrollEntry(Document):
 		payroll_payable_account = self.payroll_payable_account
 		precision = frappe.get_precision("Journal Entry Account", "debit_in_account_currency")
 
-		accounts = []
 		currencies = []
-		multi_currency = 0
 		company_currency = erpnext.get_company_currency(self.company)
 		accounting_dimensions = get_accounting_dimensions() or []
 
 		exchange_rate, amount = self.get_amount_and_exchange_rate_for_journal_entry(
 			self.payment_account, je_payment_amount, company_currency, currencies
 		)
-		accounts.append(
+		accounts = [
 			self.update_accounting_dimensions(
 				{
 					"account": self.payment_account,
@@ -552,8 +551,7 @@ class PayrollEntry(Document):
 				},
 				accounting_dimensions,
 			)
-		)
-
+		]
 		exchange_rate, amount = self.get_amount_and_exchange_rate_for_journal_entry(
 			payroll_payable_account, je_payment_amount, company_currency, currencies
 		)
@@ -570,9 +568,7 @@ class PayrollEntry(Document):
 			)
 		)
 
-		if len(currencies) > 1:
-			multi_currency = 1
-
+		multi_currency = 1 if len(currencies) > 1 else 0
 		journal_entry = frappe.new_doc("Journal Entry")
 		journal_entry.voucher_type = "Bank Entry"
 		journal_entry.user_remark = _("Payment of {0} from {1} to {2}").format(
@@ -632,16 +628,13 @@ class PayrollEntry(Document):
 		return holidays
 
 	def get_count_employee_attendance(self, employee, start_date):
-		marked_days = 0
 		attendances = frappe.get_all(
 			"Attendance",
 			fields=["count(*)"],
 			filters={"employee": employee, "attendance_date": ("between", [start_date, self.end_date])},
 			as_list=1,
 		)
-		if attendances and attendances[0][0]:
-			marked_days = attendances[0][0]
-		return marked_days
+		return attendances[0][0] if attendances and attendances[0][0] else 0
 
 
 def get_sal_struct(
@@ -669,23 +662,21 @@ def get_sal_struct(
 
 
 def get_filter_condition(filters):
-	cond = ""
-	for f in ["company", "branch", "department", "designation"]:
-		if filters.get(f):
-			cond += " and t1." + f + " = " + frappe.db.escape(filters.get(f))
-
-	return cond
+	return "".join(
+		f" and t1.{f} = {frappe.db.escape(filters.get(f))}"
+		for f in ["company", "branch", "department", "designation"]
+		if filters.get(f)
+	)
 
 
 def get_joining_relieving_condition(start_date, end_date):
-	cond = """
+	return """
 		and ifnull(t1.date_of_joining, '1900-01-01') <= '%(end_date)s'
 		and ifnull(t1.relieving_date, '2199-12-31') >= '%(start_date)s'
 	""" % {
 		"start_date": start_date,
 		"end_date": end_date,
 	}
-	return cond
 
 
 def get_emp_list(sal_struct, cond, end_date, payroll_payable_account):
@@ -712,8 +703,9 @@ def get_emp_list(sal_struct, cond, end_date, payroll_payable_account):
 
 
 def remove_payrolled_employees(emp_list, start_date, end_date):
-	new_emp_list = []
-	for employee_details in emp_list:
+	return [
+		employee_details
+		for employee_details in emp_list
 		if not frappe.db.exists(
 			"Salary Slip",
 			{
@@ -722,17 +714,15 @@ def remove_payrolled_employees(emp_list, start_date, end_date):
 				"end_date": end_date,
 				"docstatus": 1,
 			},
-		):
-			new_emp_list.append(employee_details)
-
-	return new_emp_list
+		)
+	]
 
 
 @frappe.whitelist()
 def get_start_end_dates(payroll_frequency, start_date=None, company=None):
 	"""Returns dict of start and end dates for given payroll frequency based on start_date"""
 
-	if payroll_frequency == "Monthly" or payroll_frequency == "Bimonthly" or payroll_frequency == "":
+	if payroll_frequency in ["Monthly", "Bimonthly", ""]:
 		fiscal_year = get_fiscal_year(start_date, company=company)[0]
 		month = "%02d" % getdate(start_date).month
 		m = get_month_details(fiscal_year, month)
@@ -787,8 +777,7 @@ def get_end_date(start_date, frequency):
 
 
 def get_month_details(year, month):
-	ysd = frappe.db.get_value("Fiscal Year", year, "year_start_date")
-	if ysd:
+	if ysd := frappe.db.get_value("Fiscal Year", year, "year_start_date"):
 		import calendar
 		import datetime
 
@@ -818,7 +807,7 @@ def get_payroll_entry_bank_entries(payroll_entry_name):
 	je = frappe.qb.DocType("Journal Entry")
 	jea = frappe.qb.DocType("Journal Entry Account")
 
-	journal_entries = (
+	return (
 		frappe.qb.from_(je)
 		.from_(jea)
 		.select(je.name)
@@ -830,16 +819,11 @@ def get_payroll_entry_bank_entries(payroll_entry_name):
 		)
 	).run(as_dict=True)
 
-	return journal_entries
-
 
 @frappe.whitelist()
 def payroll_entry_has_bank_entries(name: str):
-	response = {}
 	bank_entries = get_payroll_entry_bank_entries(name)
-	response["submitted"] = 1 if bank_entries else 0
-
-	return response
+	return {"submitted": 1 if bank_entries else 0}
 
 
 def log_payroll_failure(process, payroll_entry, error):
@@ -884,7 +868,7 @@ def create_salary_slips_for_employees(employees, args, publish_progress=True):
 			frappe.msgprint(
 				_(
 					"Salary Slips already exist for employees {}, and will not be processed by this payroll."
-				).format(frappe.bold(", ".join(emp for emp in salary_slips_exist_for))),
+				).format(frappe.bold(", ".join(salary_slips_exist_for))),
 				title=_("Message"),
 				indicator="orange",
 			)
@@ -911,7 +895,7 @@ def show_payroll_submission_status(submitted, unsubmitted, payroll_entry):
 				payroll_entry.start_date, payroll_entry.end_date
 			)
 		)
-	elif unsubmitted:
+	else:
 		frappe.msgprint(
 			_("Could not submit some Salary Slips: {}").format(
 				", ".join(get_link_to_form("Salary Slip", entry) for entry in unsubmitted)
@@ -937,9 +921,7 @@ def submit_salary_slips_for_employees(payroll_entry, salary_slips, publish_progr
 		submitted = []
 		unsubmitted = []
 		frappe.flags.via_payroll_entry = True
-		count = 0
-
-		for entry in salary_slips:
+		for count, entry in enumerate(salary_slips, start=1):
 			salary_slip = frappe.get_doc("Salary Slip", entry[0])
 			if salary_slip.net_pay < 0:
 				unsubmitted.append(entry[0])
@@ -950,7 +932,6 @@ def submit_salary_slips_for_employees(payroll_entry, salary_slips, publish_progr
 				except frappe.ValidationError:
 					unsubmitted.append(entry[0])
 
-			count += 1
 			if publish_progress:
 				frappe.publish_progress(count * 100 / len(salary_slips), title=_("Submitting Salary Slips..."))
 

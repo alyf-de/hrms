@@ -24,20 +24,21 @@ class EmployeeCheckin(Document):
 		self.fetch_shift()
 
 	def validate_duplicate_log(self):
-		doc = frappe.db.exists(
-			"Employee Checkin", {"employee": self.employee, "time": self.time, "name": ["!=", self.name]}
-		)
-		if doc:
+		if doc := frappe.db.exists(
+			"Employee Checkin",
+			{"employee": self.employee, "time": self.time, "name": ["!=", self.name]},
+		):
 			doc_link = frappe.get_desk_link("Employee Checkin", doc)
 			frappe.throw(
-				_("This employee already has a log with the same timestamp.{0}").format("<Br>" + doc_link)
+				_("This employee already has a log with the same timestamp.{0}").format(
+					f"<Br>{doc_link}"
+				)
 			)
 
 	def fetch_shift(self):
-		shift_actual_timings = get_actual_start_end_datetime_of_shift(
+		if shift_actual_timings := get_actual_start_end_datetime_of_shift(
 			self.employee, get_datetime(self.time), True
-		)
-		if shift_actual_timings:
+		):
 			if (
 				shift_actual_timings.shift_type.determine_check_in_and_check_out
 				== "Strictly based on Log Type in Employee Checkin"

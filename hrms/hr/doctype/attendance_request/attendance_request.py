@@ -24,10 +24,9 @@ class AttendanceRequest(Document):
 		self.create_attendance()
 
 	def on_cancel(self):
-		attendance_list = frappe.get_list(
+		if attendance_list := frappe.get_list(
 			"Attendance", {"employee": self.employee, "attendance_request": self.name}
-		)
-		if attendance_list:
+		):
 			for attendance in attendance_list:
 				attendance_obj = frappe.get_doc("Attendance", attendance["name"])
 				attendance_obj.cancel()
@@ -61,15 +60,13 @@ class AttendanceRequest(Document):
 			)
 			return True
 
-		# Check if employee on Leave
-		leave_record = frappe.db.sql(
+		if leave_record := frappe.db.sql(
 			"""select half_day from `tabLeave Application`
 			where employee = %s and %s between from_date and to_date
 			and docstatus = 1""",
 			(self.employee, attendance_date),
 			as_dict=True,
-		)
-		if leave_record:
+		):
 			frappe.msgprint(
 				_("Attendance not submitted for {0} as {1} on leave.").format(attendance_date, self.employee),
 				alert=1,

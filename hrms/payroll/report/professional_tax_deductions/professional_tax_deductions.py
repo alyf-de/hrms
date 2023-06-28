@@ -16,7 +16,7 @@ def execute(filters=None):
 
 
 def get_columns(filters):
-	columns = [
+	return [
 		{
 			"label": _("Employee"),
 			"options": "Employee",
@@ -31,10 +31,13 @@ def get_columns(filters):
 			"fieldtype": "Link",
 			"width": 160,
 		},
-		{"label": _("Amount"), "fieldname": "amount", "fieldtype": "Currency", "width": 140},
+		{
+			"label": _("Amount"),
+			"fieldname": "amount",
+			"fieldtype": "Currency",
+			"width": 140,
+		},
 	]
-
-	return columns
 
 
 def get_data(filters):

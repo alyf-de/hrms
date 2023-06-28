@@ -16,8 +16,13 @@ def execute(filters=None):
 
 
 def get_columns(filters=None):
-	columns = [
-		{"label": _("User"), "fieldname": "user", "fieldtype": "Data", "width": 300},
+	return [
+		{
+			"label": _("User"),
+			"fieldname": "user",
+			"fieldtype": "Data",
+			"width": 300,
+		},
 		{
 			"label": _("Replies"),
 			"fieldname": "count",
@@ -33,7 +38,6 @@ def get_columns(filters=None):
 			"align": "right",
 		},
 	]
-	return columns
 
 
 def get_data(filters):

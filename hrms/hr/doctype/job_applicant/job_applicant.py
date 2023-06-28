@@ -19,8 +19,9 @@ class DuplicationError(frappe.ValidationError):
 
 class JobApplicant(Document):
 	def onload(self):
-		job_offer = frappe.get_all("Job Offer", filters={"job_applicant": self.name})
-		if job_offer:
+		if job_offer := frappe.get_all(
+			"Job Offer", filters={"job_applicant": self.name}
+		):
 			self.get("__onload").job_offer = job_offer[0].name
 
 	def autoname(self):

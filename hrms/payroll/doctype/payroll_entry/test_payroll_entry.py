@@ -115,8 +115,7 @@ class TestPayrollEntry(FrappeTestCase):
 		salary_slip = frappe.get_doc("Salary Slip", salary_slip)
 
 		payroll_entry.reload()
-		payroll_je = salary_slip.journal_entry
-		if payroll_je:
+		if payroll_je := salary_slip.journal_entry:
 			payroll_je_doc = frappe.get_doc("Journal Entry", payroll_je)
 			self.assertEqual(salary_slip.base_gross_pay, payroll_je_doc.total_debit)
 			self.assertEqual(salary_slip.base_gross_pay, payroll_je_doc.total_credit)

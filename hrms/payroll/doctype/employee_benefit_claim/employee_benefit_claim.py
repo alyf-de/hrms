@@ -72,10 +72,9 @@ class EmployeeBenefitClaim(Document):
 		pro_rata_amount = self.get_pro_rata_amount_in_application(payroll_period.name)
 		if not pro_rata_amount:
 			pro_rata_amount = 0
-			# Get pro_rata_amount if there is no application,
-			# get salary structure for the date and calculate pro-rata amount
-			sal_struct_name = get_assigned_salary_structure(self.employee, self.claim_date)
-			if sal_struct_name:
+			if sal_struct_name := get_assigned_salary_structure(
+				self.employee, self.claim_date
+			):
 				sal_struct = frappe.get_doc("Salary Structure", sal_struct_name)
 				pro_rata_amount = get_benefit_pro_rata_ratio_amount(self.employee, self.claim_date, sal_struct)
 
@@ -90,11 +89,14 @@ class EmployeeBenefitClaim(Document):
 			)
 
 	def get_pro_rata_amount_in_application(self, payroll_period):
-		application = frappe.db.exists(
+		if application := frappe.db.exists(
 			"Employee Benefit Application",
-			{"employee": self.employee, "payroll_period": payroll_period, "docstatus": 1},
-		)
-		if application:
+			{
+				"employee": self.employee,
+				"payroll_period": payroll_period,
+				"docstatus": 1,
+			},
+		):
 			return frappe.db.get_value(
 				"Employee Benefit Application", application, "pro_rata_dispensed_amount"
 			)
@@ -127,8 +129,7 @@ def get_benefit_pro_rata_ratio_amount(employee, on_date, sal_struct):
 			if sal_struct_row.is_flexible_benefit == 1 and pay_against_benefit_claim != 1:
 				component_max = max_benefit_amount
 				benefit_amount = component_max * sal_struct.max_benefits / total_pro_rata_max
-				if benefit_amount > component_max:
-					benefit_amount = component_max
+				benefit_amount = min(benefit_amount, component_max)
 				benefit_amount_total += benefit_amount
 	return benefit_amount_total
 
@@ -147,7 +148,7 @@ def get_benefit_claim_amount(employee, start_date, end_date, salary_component=No
 	if salary_component:
 		query += " and earning_component = %(earning_component)s"
 
-	claimed_amount = flt(
+	return flt(
 		frappe.db.sql(
 			query,
 			{
@@ -159,17 +160,18 @@ def get_benefit_claim_amount(employee, start_date, end_date, salary_component=No
 		)[0][0]
 	)
 
-	return claimed_amount
-
 
 def get_total_benefit_dispensed(employee, sal_struct, sal_slip_start_date, payroll_period):
 	pro_rata_amount = 0
 	claimed_amount = 0
-	application = frappe.db.exists(
+	if application := frappe.db.exists(
 		"Employee Benefit Application",
-		{"employee": employee, "payroll_period": payroll_period.name, "docstatus": 1},
-	)
-	if application:
+		{
+			"employee": employee,
+			"payroll_period": payroll_period.name,
+			"docstatus": 1,
+		},
+	):
 		application_obj = frappe.get_doc("Employee Benefit Application", application)
 		pro_rata_amount = (
 			application_obj.pro_rata_dispensed_amount
@@ -218,24 +220,21 @@ def get_last_payroll_period_benefits(
 							employee, sal_slip_start_date, sal_slip_end_date, d.salary_component
 						)
 						amount += current_claimed_amount
-						struct_row = {}
-						salary_components_dict = {}
-						struct_row["depends_on_payment_days"] = salary_component.depends_on_payment_days
-						struct_row["salary_component"] = salary_component.name
-						struct_row["abbr"] = salary_component.salary_component_abbr
-						struct_row["do_not_include_in_total"] = salary_component.do_not_include_in_total
-						struct_row["is_tax_applicable"] = (salary_component.is_tax_applicable,)
-						struct_row["is_flexible_benefit"] = (salary_component.is_flexible_benefit,)
-						struct_row[
-							"variable_based_on_taxable_salary"
-						] = salary_component.variable_based_on_taxable_salary
-						salary_components_dict["amount"] = amount
-						salary_components_dict["struct_row"] = struct_row
+						struct_row = {
+							"depends_on_payment_days": salary_component.depends_on_payment_days,
+							"salary_component": salary_component.name,
+							"abbr": salary_component.salary_component_abbr,
+							"do_not_include_in_total": salary_component.do_not_include_in_total,
+							"is_tax_applicable": (salary_component.is_tax_applicable,),
+							"is_flexible_benefit": (salary_component.is_flexible_benefit,),
+							"variable_based_on_taxable_salary": salary_component.variable_based_on_taxable_salary,
+						}
+						salary_components_dict = {"amount": amount, "struct_row": struct_row}
 						salary_components_array.append(salary_components_dict)
 			if not have_remaining:
 				break
 
-		if len(salary_components_array) > 0:
+		if salary_components_array:
 			return salary_components_array
 
 	return False

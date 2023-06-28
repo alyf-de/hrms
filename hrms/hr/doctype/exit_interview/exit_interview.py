@@ -25,10 +25,14 @@ class ExitInterview(Document):
 			)
 
 	def validate_duplicate_interview(self):
-		doc = frappe.db.exists(
-			"Exit Interview", {"employee": self.employee, "name": ("!=", self.name), "docstatus": ("!=", 2)}
-		)
-		if doc:
+		if doc := frappe.db.exists(
+			"Exit Interview",
+			{
+				"employee": self.employee,
+				"name": ("!=", self.name),
+				"docstatus": ("!=", 2),
+			},
+		):
 			frappe.throw(
 				_("Exit Interview {0} already exists for Employee: {1}").format(
 					get_link_to_form("Exit Interview", doc), frappe.bold(self.employee)

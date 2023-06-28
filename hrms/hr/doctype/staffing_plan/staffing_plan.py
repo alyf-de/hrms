@@ -212,8 +212,9 @@ def get_active_staffing_plan_details(company, designation, from_date=None, to_da
 	)
 
 	if not staffing_plan:
-		parent_company = frappe.get_cached_value("Company", company, "parent_company")
-		if parent_company:
+		if parent_company := frappe.get_cached_value(
+			"Company", company, "parent_company"
+		):
 			staffing_plan = get_active_staffing_plan_details(
 				parent_company, designation, from_date, to_date
 			)

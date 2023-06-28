@@ -167,13 +167,12 @@ def create_skill_set(skill_set):
 def create_interview_type(name="test_interview_type"):
 	if frappe.db.exists("Interview Type", name):
 		return frappe.get_doc("Interview Type", name).name
-	else:
-		doc = frappe.new_doc("Interview Type")
-		doc.name = name
-		doc.description = "_Test_Description"
-		doc.save()
+	doc = frappe.new_doc("Interview Type")
+	doc.name = name
+	doc.description = "_Test_Description"
+	doc.save()
 
-		return doc.name
+	return doc.name
 
 
 def setup_reminder_settings():

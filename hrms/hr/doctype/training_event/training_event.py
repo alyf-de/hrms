@@ -26,13 +26,12 @@ class TrainingEvent(Document):
 			frappe.throw(_("End time cannot be before start time"))
 
 	def set_status_for_attendees(self):
-		if self.event_status == "Completed":
-			for employee in self.employees:
+		for employee in self.employees:
+			if self.event_status == "Completed":
 				if employee.attendance == "Present" and employee.status != "Feedback Submitted":
 					employee.status = "Completed"
 
-		elif self.event_status == "Scheduled":
-			for employee in self.employees:
+			elif self.event_status == "Scheduled":
 				employee.status = "Open"
 
 		self.db_update_all()

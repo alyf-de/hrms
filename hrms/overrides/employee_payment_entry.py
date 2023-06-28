@@ -101,9 +101,7 @@ def get_payment_entry_for_employee(dt, dn, party_amount=None, bank_account=None,
 	pe.set_missing_values()
 
 	if party_account and bank:
-		reference_doc = None
-		if dt == "Employee Advance":
-			reference_doc = doc
+		reference_doc = doc if dt == "Employee Advance" else None
 		pe.set_exchange_rate(ref_doc=reference_doc)
 		pe.set_amounts()
 

@@ -40,8 +40,7 @@ class EmployeeTaxExemptionDeclaration(Document):
 	def calculate_hra_exemption(self):
 		self.salary_structure_hra, self.annual_hra_exemption, self.monthly_hra_exemption = 0, 0, 0
 		if self.get("monthly_house_rent"):
-			hra_exemption = calculate_annual_eligible_hra_exemption(self)
-			if hra_exemption:
+			if hra_exemption := calculate_annual_eligible_hra_exemption(self):
 				self.total_exemption_amount += hra_exemption["annual_exemption"]
 				self.total_exemption_amount = flt(
 					self.total_exemption_amount, self.precision("total_exemption_amount")
@@ -59,7 +58,7 @@ class EmployeeTaxExemptionDeclaration(Document):
 
 @frappe.whitelist()
 def make_proof_submission(source_name, target_doc=None):
-	doclist = get_mapped_doc(
+	return get_mapped_doc(
 		"Employee Tax Exemption Declaration",
 		source_name,
 		{
@@ -74,5 +73,3 @@ def make_proof_submission(source_name, target_doc=None):
 		},
 		target_doc,
 	)
-
-	return doclist

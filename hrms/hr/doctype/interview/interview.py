@@ -28,12 +28,14 @@ class Interview(Document):
 			)
 
 	def validate_duplicate_interview(self):
-		duplicate_interview = frappe.db.exists(
+		if duplicate_interview := frappe.db.exists(
 			"Interview",
-			{"job_applicant": self.job_applicant, "interview_round": self.interview_round, "docstatus": 1},
-		)
-
-		if duplicate_interview:
+			{
+				"job_applicant": self.job_applicant,
+				"interview_round": self.interview_round,
+				"docstatus": 1,
+			},
+		):
 			frappe.throw(
 				_(
 					"Job Applicants are not allowed to appear twice for the same Interview round. Interview {0} already scheduled for Job Applicant {1}"
@@ -61,7 +63,7 @@ class Interview(Document):
 	def validate_overlap(self):
 		interviewers = [entry.interviewer for entry in self.interview_details] or [""]
 
-		overlaps = frappe.db.sql(
+		if overlaps := frappe.db.sql(
 			"""
 			SELECT interview.name
 			FROM `tabInterview` as interview
@@ -84,20 +86,18 @@ class Interview(Document):
 				self.to_time,
 				self.from_time,
 			),
-		)
-
-		if overlaps:
+		):
 			overlapping_details = _("Interview overlaps with {0}").format(
 				get_link_to_form("Interview", overlaps[0][0])
 			)
 			frappe.throw(overlapping_details, title=_("Overlap"))
 
 	def set_average_rating(self):
-		total_rating = 0
-		for entry in self.interview_details:
-			if entry.average_rating:
-				total_rating += entry.average_rating
-
+		total_rating = sum(
+			entry.average_rating
+			for entry in self.interview_details
+			if entry.average_rating
+		)
 		self.average_rating = flt(
 			total_rating / len(self.interview_details) if len(self.interview_details) else 0
 		)
@@ -280,7 +280,7 @@ def create_interview_feedback(data, interview_name, interviewer, job_applicant):
 @frappe.validate_and_sanitize_search_inputs
 def get_interviewer_list(doctype, txt, searchfield, start, page_len, filters):
 	filters = [
-		["Has Role", "parent", "like", "%{}%".format(txt)],
+		["Has Role", "parent", "like", f"%{txt}%"],
 		["Has Role", "role", "=", "interviewer"],
 		["Has Role", "parenttype", "=", "User"],
 	]
@@ -340,16 +340,15 @@ def get_events(start, end, filters=None):
 	)
 
 	for d in interviews:
-		subject_data = []
-		for field in ["name", "job_applicant", "interview_round"]:
-			if not d.get(field):
-				continue
-			subject_data.append(d.get(field))
-
+		subject_data = [
+			d.get(field)
+			for field in ["name", "job_applicant", "interview_round"]
+			if d.get(field)
+		]
 		color = event_color.get(d.status)
 		interview_data = {
-			"from": get_datetime("%s %s" % (d.scheduled_on, d.from_time or "00:00:00")),
-			"to": get_datetime("%s %s" % (d.scheduled_on, d.to_time or "00:00:00")),
+			"from": get_datetime(f'{d.scheduled_on} {d.from_time or "00:00:00"}'),
+			"to": get_datetime(f'{d.scheduled_on} {d.to_time or "00:00:00"}'),
 			"name": d.name,
 			"subject": "\n".join(subject_data),
 			"color": color if color else "#89bcde",

@@ -60,34 +60,32 @@ class Gratuity(AccountsController):
 		gl_entry = []
 		# payable entry
 		if self.amount:
-			gl_entry.append(
-				self.get_gl_dict(
-					{
-						"account": self.payable_account,
-						"credit": self.amount,
-						"credit_in_account_currency": self.amount,
-						"against": self.expense_account,
-						"party_type": "Employee",
-						"party": self.employee,
-						"against_voucher_type": self.doctype,
-						"against_voucher": self.name,
-						"cost_center": self.cost_center,
-					},
-					item=self,
-				)
-			)
-
-			# expense entries
-			gl_entry.append(
-				self.get_gl_dict(
-					{
-						"account": self.expense_account,
-						"debit": self.amount,
-						"debit_in_account_currency": self.amount,
-						"against": self.payable_account,
-						"cost_center": self.cost_center,
-					},
-					item=self,
+			gl_entry.extend(
+				(
+					self.get_gl_dict(
+						{
+							"account": self.payable_account,
+							"credit": self.amount,
+							"credit_in_account_currency": self.amount,
+							"against": self.expense_account,
+							"party_type": "Employee",
+							"party": self.employee,
+							"against_voucher_type": self.doctype,
+							"against_voucher": self.name,
+							"cost_center": self.cost_center,
+						},
+						item=self,
+					),
+					self.get_gl_dict(
+						{
+							"account": self.expense_account,
+							"debit": self.amount,
+							"debit_in_account_currency": self.amount,
+							"against": self.payable_account,
+							"cost_center": self.cost_center,
+						},
+						item=self,
+					),
 				)
 			)
 		else:
@@ -305,12 +303,9 @@ def get_total_applicable_component_amount(employee, applicable_earnings_componen
 		},
 		fields=["amount"],
 	)
-	total_applicable_components_amount = 0
 	if not len(component_and_amounts):
 		frappe.throw(_("No Applicable Component is present in last month salary slip"))
-	for data in component_and_amounts:
-		total_applicable_components_amount += data.amount
-	return total_applicable_components_amount
+	return sum(data.amount for data in component_and_amounts)
 
 
 def calculate_amount_based_on_current_slab(
@@ -348,9 +343,11 @@ def get_salary_structure(employee):
 
 
 def get_last_salary_slip(employee):
-	salary_slips = frappe.get_list(
-		"Salary Slip", filters={"employee": employee, "docstatus": 1}, order_by="start_date desc"
-	)
-	if not salary_slips:
+	if salary_slips := frappe.get_list(
+		"Salary Slip",
+		filters={"employee": employee, "docstatus": 1},
+		order_by="start_date desc",
+	):
+		return salary_slips[0].name
+	else:
 		return
-	return salary_slips[0].name

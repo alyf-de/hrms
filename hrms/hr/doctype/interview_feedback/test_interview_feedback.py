@@ -47,11 +47,7 @@ class TestInterviewFeedback(unittest.TestCase):
 		# calculating Average
 		feedback_1 = create_interview_feedback(interview.name, interviewer, skill_ratings)
 
-		total_rating = 0
-		for d in feedback_1.skill_assessment:
-			if d.rating:
-				total_rating += d.rating
-
+		total_rating = sum(d.rating for d in feedback_1.skill_assessment if d.rating)
 		avg_rating = flt(
 			total_rating / len(feedback_1.skill_assessment) if len(feedback_1.skill_assessment) else 0
 		)

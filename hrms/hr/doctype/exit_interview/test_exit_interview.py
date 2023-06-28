@@ -100,9 +100,7 @@ def create_exit_interview(employee, save=True):
 		}
 	)
 
-	if save:
-		return doc.insert()
-	return doc
+	return doc.insert() if save else doc
 
 
 def create_notification_template():

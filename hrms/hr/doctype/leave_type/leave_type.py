@@ -16,8 +16,7 @@ class LeaveType(Document):
 				filters={"leave_type": self.name, "from_date": ("<=", today()), "to_date": (">=", today())},
 				fields=["name"],
 			)
-			leave_allocation = [l["name"] for l in leave_allocation]
-			if leave_allocation:
+			if leave_allocation := [l["name"] for l in leave_allocation]:
 				frappe.throw(
 					_(
 						"Leave application is linked with leave allocations {0}. Leave application cannot be set as leave without pay"

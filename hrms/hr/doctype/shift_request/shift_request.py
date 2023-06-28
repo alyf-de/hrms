@@ -50,10 +50,10 @@ class ShiftRequest(Document):
 			)
 
 	def on_cancel(self):
-		shift_assignment_list = frappe.get_list(
-			"Shift Assignment", {"employee": self.employee, "shift_request": self.name}
-		)
-		if shift_assignment_list:
+		if shift_assignment_list := frappe.get_list(
+			"Shift Assignment",
+			{"employee": self.employee, "shift_request": self.name},
+		):
 			for shift in shift_assignment_list:
 				shift_assignment_doc = frappe.get_doc("Shift Assignment", shift["name"])
 				shift_assignment_doc.cancel()
@@ -84,9 +84,9 @@ class ShiftRequest(Document):
 	def validate_overlapping_shift_requests(self):
 		overlapping_dates = self.get_overlapping_dates()
 		if len(overlapping_dates):
-			# if dates are overlapping, check if timings are overlapping, else allow
-			overlapping_timings = has_overlapping_timings(self.shift_type, overlapping_dates[0].shift_type)
-			if overlapping_timings:
+			if overlapping_timings := has_overlapping_timings(
+				self.shift_type, overlapping_dates[0].shift_type
+			):
 				self.throw_overlap_error(overlapping_dates[0])
 
 	def get_overlapping_dates(self):

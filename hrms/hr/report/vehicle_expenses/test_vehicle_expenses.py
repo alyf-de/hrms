@@ -17,17 +17,19 @@ from hrms.hr.report.vehicle_expenses.vehicle_expenses import execute
 
 class TestVehicleExpenses(unittest.TestCase):
 	@classmethod
-	def setUpClass(self):
+	def setUpClass(cls):
 		frappe.db.sql("delete from `tabVehicle Log`")
 
 		employee_id = frappe.db.sql(
 			"""select name from `tabEmployee` where name='testdriver@example.com'"""
 		)
-		self.employee_id = employee_id[0][0] if employee_id else None
-		if not self.employee_id:
-			self.employee_id = make_employee("testdriver@example.com", company="_Test Company")
+		cls.employee_id = employee_id[0][0] if employee_id else None
+		if not cls.employee_id:
+			cls.employee_id = make_employee(
+				"testdriver@example.com", company="_Test Company"
+			)
 
-		self.license_plate = get_vehicle(self.employee_id)
+		cls.license_plate = get_vehicle(cls.employee_id)
 
 	def test_vehicle_expenses_based_on_fiscal_year(self):
 		vehicle_log = make_vehicle_log(self.license_plate, self.employee_id, with_services=True)

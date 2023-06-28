@@ -102,7 +102,7 @@ class TestCompensatoryLeaveRequest(unittest.TestCase):
 
 
 def get_compensatory_leave_request(employee, leave_date=today()):
-	prev_comp_leave_req = frappe.db.get_value(
+	if prev_comp_leave_req := frappe.db.get_value(
 		"Compensatory Leave Request",
 		dict(
 			leave_type="Compensatory Off",
@@ -111,8 +111,7 @@ def get_compensatory_leave_request(employee, leave_date=today()):
 			employee=employee,
 		),
 		"name",
-	)
-	if prev_comp_leave_req:
+	):
 		return frappe.get_doc("Compensatory Leave Request", prev_comp_leave_req)
 
 	return frappe.get_doc(

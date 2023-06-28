@@ -18,9 +18,13 @@ class RetentionBonus(Document):
 
 	def on_submit(self):
 		company = frappe.db.get_value("Employee", self.employee, "company")
-		additional_salary = self.get_additional_salary()
-
-		if not additional_salary:
+		if additional_salary := self.get_additional_salary():
+			bonus_added = (
+				frappe.db.get_value("Additional Salary", additional_salary, "amount") + self.bonus_amount
+			)
+			frappe.db.set_value("Additional Salary", additional_salary, "amount", bonus_added)
+			self.db_set("additional_salary", additional_salary)
+		else:
 			additional_salary = frappe.new_doc("Additional Salary")
 			additional_salary.employee = self.employee
 			additional_salary.salary_component = self.salary_component
@@ -31,14 +35,6 @@ class RetentionBonus(Document):
 			additional_salary.ref_doctype = self.doctype
 			additional_salary.ref_docname = self.name
 			additional_salary.submit()
-			# self.db_set('additional_salary', additional_salary.name)
-
-		else:
-			bonus_added = (
-				frappe.db.get_value("Additional Salary", additional_salary, "amount") + self.bonus_amount
-			)
-			frappe.db.set_value("Additional Salary", additional_salary, "amount", bonus_added)
-			self.db_set("additional_salary", additional_salary)
 
 	def on_cancel(self):
 

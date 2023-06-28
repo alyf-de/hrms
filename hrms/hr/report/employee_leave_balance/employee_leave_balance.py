@@ -151,20 +151,17 @@ def get_opening_balance(
 	opening_balance_date = add_days(filters.from_date, -1)
 	allocation = get_previous_allocation(filters.from_date, leave_type, employee)
 
-	if (
-		allocation
-		and allocation.get("to_date")
-		and opening_balance_date
-		and getdate(allocation.get("to_date")) == getdate(opening_balance_date)
-	):
-		# if opening balance date is same as the previous allocation's expiry
-		# then opening balance should only consider carry forwarded leaves
-		opening_balance = carry_forwarded_leaves
-	else:
-		# else directly get leave balance on the previous day
-		opening_balance = get_leave_balance_on(employee, leave_type, opening_balance_date)
-
-	return opening_balance
+	return (
+		carry_forwarded_leaves
+		if (
+			allocation
+			and allocation.get("to_date")
+			and opening_balance_date
+			and getdate(allocation.get("to_date"))
+			== getdate(opening_balance_date)
+		)
+		else get_leave_balance_on(employee, leave_type, opening_balance_date)
+	)
 
 
 def get_conditions(filters: Filters) -> Dict:
@@ -243,7 +240,7 @@ def get_leave_ledger_entries(
 	from_date: str, to_date: str, employee: str, leave_type: str
 ) -> List[Dict]:
 	ledger = frappe.qb.DocType("Leave Ledger Entry")
-	records = (
+	return (
 		frappe.qb.from_(ledger)
 		.select(
 			ledger.employee,
@@ -269,24 +266,20 @@ def get_leave_ledger_entries(
 		)
 	).run(as_dict=True)
 
-	return records
-
 
 def get_chart_data(data: List) -> Dict:
 	labels = []
 	datasets = []
 	employee_data = data
 
-	if data and data[0].get("employee_name"):
+	if employee_data and employee_data[0].get("employee_name"):
 		get_dataset_for_chart(employee_data, datasets, labels)
 
-	chart = {
+	return {
 		"data": {"labels": labels, "datasets": datasets},
 		"type": "bar",
 		"colors": ["#456789", "#EE8888", "#7E77BF"],
 	}
-
-	return chart
 
 
 def get_dataset_for_chart(employee_data: List, datasets: List, labels: List) -> List:
@@ -294,12 +287,16 @@ def get_dataset_for_chart(employee_data: List, datasets: List, labels: List) -> 
 	employee_data = sorted(employee_data, key=lambda k: k["employee_name"])
 
 	for key, group in groupby(employee_data, lambda x: x["employee_name"]):
-		for grp in group:
-			if grp.closing_balance:
-				leaves.append(
-					frappe._dict({"leave_type": grp.leave_type, "closing_balance": grp.closing_balance})
-				)
-
+		leaves.extend(
+			frappe._dict(
+				{
+					"leave_type": grp.leave_type,
+					"closing_balance": grp.closing_balance,
+				}
+			)
+			for grp in group
+			if grp.closing_balance
+		)
 		if leaves:
 			labels.append(key)
 

@@ -41,12 +41,14 @@ class InterviewFeedback(Document):
 			)
 
 	def validate_duplicate(self):
-		duplicate_feedback = frappe.db.exists(
+		if duplicate_feedback := frappe.db.exists(
 			"Interview Feedback",
-			{"interviewer": self.interviewer, "interview": self.interview, "docstatus": 1},
-		)
-
-		if duplicate_feedback:
+			{
+				"interviewer": self.interviewer,
+				"interview": self.interview,
+				"docstatus": 1,
+			},
+		):
 			frappe.throw(
 				_(
 					"Feedback already submitted for the Interview {0}. Please cancel the previous Interview Feedback {1} to continue."
@@ -56,11 +58,7 @@ class InterviewFeedback(Document):
 			)
 
 	def calculate_average_rating(self):
-		total_rating = 0
-		for d in self.skill_assessment:
-			if d.rating:
-				total_rating += d.rating
-
+		total_rating = sum(d.rating for d in self.skill_assessment if d.rating)
 		self.average_rating = flt(
 			total_rating / len(self.skill_assessment) if len(self.skill_assessment) else 0
 		)
@@ -68,18 +66,16 @@ class InterviewFeedback(Document):
 	def update_interview_details(self):
 		doc = frappe.get_doc("Interview", self.interview)
 
-		if self.docstatus == 2:
-			for entry in doc.interview_details:
+		for entry in doc.interview_details:
+			if self.docstatus == 2:
 				if entry.interview_feedback == self.name:
 					entry.average_rating = entry.interview_feedback = entry.comments = entry.result = None
 					break
-		else:
-			for entry in doc.interview_details:
-				if entry.interviewer == self.interviewer:
-					entry.average_rating = self.average_rating
-					entry.interview_feedback = self.name
-					entry.comments = self.feedback
-					entry.result = self.result
+			elif entry.interviewer == self.interviewer:
+				entry.average_rating = self.average_rating
+				entry.interview_feedback = self.name
+				entry.comments = self.feedback
+				entry.result = self.result
 
 		doc.save()
 		doc.notify_update()

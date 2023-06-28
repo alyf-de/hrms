@@ -32,13 +32,12 @@ class SalaryStructure(Document):
 		overwritten_fields_if_missing = ["amount_based_on_formula", "formula", "amount"]
 		for table in ["earnings", "deductions"]:
 			for d in self.get(table):
-				component_default_value = frappe.db.get_value(
+				if component_default_value := frappe.db.get_value(
 					"Salary Component",
 					cstr(d.salary_component),
 					overwritten_fields + overwritten_fields_if_missing,
 					as_dict=1,
-				)
-				if component_default_value:
+				):
 					for fieldname in overwritten_fields:
 						value = component_default_value.get(fieldname)
 						if d.get(fieldname) != value:
@@ -149,14 +148,12 @@ class SalaryStructure(Document):
 
 		condition_str = " and " + " and ".join(conditions) if conditions else ""
 
-		employees = frappe.db.sql_list(
+		return frappe.db.sql_list(
 			"select name from tabEmployee where status='Active' {condition}".format(
 				condition=condition_str
 			),
 			tuple(values),
 		)
-
-		return employees
 
 	@frappe.whitelist()
 	def assign_salary_structure(
@@ -171,11 +168,13 @@ class SalaryStructure(Document):
 		variable=None,
 		income_tax_slab=None,
 	):
-		employees = self.get_employees(
-			company=self.company, grade=grade, department=department, designation=designation, name=employee
-		)
-
-		if employees:
+		if employees := self.get_employees(
+			company=self.company,
+			grade=grade,
+			department=department,
+			designation=designation,
+			name=employee,
+		):
 			if len(employees) > 20:
 				frappe.enqueue(
 					assign_salary_structure_for_employees,
@@ -245,16 +244,16 @@ def create_salary_structures_assignment(
 		payroll_payable_account = frappe.db.get_value(
 			"Company", salary_structure.company, "default_payroll_payable_account"
 		)
-		if not payroll_payable_account:
-			frappe.throw(_('Please set "Default Payroll Payable Account" in Company Defaults'))
+	if not payroll_payable_account:
+		frappe.throw(_('Please set "Default Payroll Payable Account" in Company Defaults'))
 	payroll_payable_account_currency = frappe.db.get_value(
 		"Account", payroll_payable_account, "account_currency"
 	)
 	company_curency = erpnext.get_company_currency(salary_structure.company)
-	if (
-		payroll_payable_account_currency != salary_structure.currency
-		and payroll_payable_account_currency != company_curency
-	):
+	if payroll_payable_account_currency not in [
+		salary_structure.currency,
+		company_curency,
+	]:
 		frappe.throw(
 			_("Invalid Payroll Payable Account. The account currency must be {0} or {1}").format(
 				salary_structure.currency, company_curency
@@ -363,7 +362,7 @@ def get_employees(salary_structure):
 			).format(salary_structure, salary_structure)
 		)
 
-	return list(set([d.employee for d in employees]))
+	return list({d.employee for d in employees})
 
 
 @frappe.whitelist()
@@ -379,12 +378,10 @@ def get_salary_component(doctype, txt, searchfield, start, page_len, filters):
 		.where((sc.type == filters.get("component_type")) & (sc.disabled == 0))
 	).run(as_dict=True)
 
-	accounts = []
-	for component in salary_components:
-		if not component.company:
-			accounts.append((component.name, component.account, component.company))
-		else:
-			if component.company == filters["company"]:
-				accounts.append((component.name, component.account, component.company))
-
-	return accounts
+	return [
+		(component.name, component.account, component.company)
+		for component in salary_components
+		if component.company
+		and component.company == filters["company"]
+		or not component.company
+	]

@@ -31,17 +31,15 @@ class TrainingFeedback(Document):
 			frappe.throw(_("Feedback cannot be recorded for an absent Employee."))
 
 	def on_submit(self):
-		employee = frappe.db.get_value(
-			"Training Event Employee", {"parent": self.training_event, "employee": self.employee}
-		)
-
-		if employee:
+		if employee := frappe.db.get_value(
+			"Training Event Employee",
+			{"parent": self.training_event, "employee": self.employee},
+		):
 			frappe.db.set_value("Training Event Employee", employee, "status", "Feedback Submitted")
 
 	def on_cancel(self):
-		employee = frappe.db.get_value(
-			"Training Event Employee", {"parent": self.training_event, "employee": self.employee}
-		)
-
-		if employee:
+		if employee := frappe.db.get_value(
+			"Training Event Employee",
+			{"parent": self.training_event, "employee": self.employee},
+		):
 			frappe.db.set_value("Training Event Employee", employee, "status", "Completed")

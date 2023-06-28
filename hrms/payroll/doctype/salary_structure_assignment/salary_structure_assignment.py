@@ -83,8 +83,7 @@ class SalaryStructureAssignment(Document):
 	@frappe.whitelist()
 	def set_payroll_cost_centers(self):
 		self.payroll_cost_centers = []
-		default_payroll_cost_center = self.get_payroll_cost_center()
-		if default_payroll_cost_center:
+		if default_payroll_cost_center := self.get_payroll_cost_center():
 			self.append(
 				"payroll_cost_centers", {"cost_center": default_payroll_cost_center, "percentage": 100}
 			)
@@ -98,7 +97,9 @@ class SalaryStructureAssignment(Document):
 
 	def validate_cost_center_distribution(self):
 		if self.get("payroll_cost_centers"):
-			total_percentage = sum([flt(d.percentage) for d in self.get("payroll_cost_centers", [])])
+			total_percentage = sum(
+				flt(d.percentage) for d in self.get("payroll_cost_centers", [])
+			)
 			if total_percentage != 100:
 				frappe.throw(_("Total percentage against cost centers should be 100"))
 

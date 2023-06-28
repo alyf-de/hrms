@@ -8,8 +8,9 @@ import frappe
 
 class TestLeavePolicy(unittest.TestCase):
 	def test_max_leave_allowed(self):
-		random_leave_type = frappe.get_all("Leave Type", fields=["name", "max_leaves_allowed"])
-		if random_leave_type:
+		if random_leave_type := frappe.get_all(
+			"Leave Type", fields=["name", "max_leaves_allowed"]
+		):
 			random_leave_type = random_leave_type[0]
 			leave_type = frappe.get_doc("Leave Type", random_leave_type.name)
 			leave_type.max_leaves_allowed = 2

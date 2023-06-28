@@ -28,8 +28,7 @@ class TestProjectProfitability(FrappeTestCase):
 		self.salary_slip = make_salary_slip_from_timesheet(self.timesheet.name)
 		self.salary_slip.start_date = self.timesheet.start_date
 
-		holidays = self.salary_slip.get_holidays_for_employee(date, date)
-		if holidays:
+		if holidays := self.salary_slip.get_holidays_for_employee(date, date):
 			frappe.db.set_value("Payroll Settings", None, "include_holidays_in_total_working_days", 1)
 
 		self.salary_slip.submit()

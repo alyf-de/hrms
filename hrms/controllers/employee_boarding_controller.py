@@ -25,7 +25,7 @@ class EmployeeBoardingController(Document):
 
 	def on_submit(self):
 		# create the project for the given employee onboarding
-		project_name = _(self.doctype) + " : "
+		project_name = f"{_(self.doctype)} : "
 		if self.doctype == "Employee Onboarding":
 			project_name += self.job_applicant
 		else:
@@ -62,7 +62,7 @@ class EmployeeBoardingController(Document):
 				{
 					"doctype": "Task",
 					"project": self.project,
-					"subject": activity.activity_name + " : " + self.employee_name,
+					"subject": f"{activity.activity_name} : {self.employee_name}",
 					"description": activity.description,
 					"department": self.department,
 					"company": self.company,
@@ -100,16 +100,17 @@ class EmployeeBoardingController(Document):
 				self.assign_task_to_users(task, users)
 
 	def get_holiday_list(self):
-		if self.doctype == "Employee Separation":
-			return get_holiday_list_for_employee(self.employee)
+		if (
+			self.doctype != "Employee Separation"
+			and not self.employee
+			and not self.holiday_list
+		):
+			frappe.throw(_("Please set the Holiday List."), frappe.MandatoryError)
+		elif self.doctype != "Employee Separation" and not self.employee:
+			return self.holiday_list
+
 		else:
-			if self.employee:
-				return get_holiday_list_for_employee(self.employee)
-			else:
-				if not self.holiday_list:
-					frappe.throw(_("Please set the Holiday List."), frappe.MandatoryError)
-				else:
-					return self.holiday_list
+			return get_holiday_list_for_employee(self.employee)
 
 	def get_task_dates(self, activity, holiday_list):
 		start_date = end_date = None

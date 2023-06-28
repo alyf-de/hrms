@@ -146,7 +146,7 @@ def get_pending_amount(employee, posting_date):
 		filters={"employee": employee, "docstatus": 1, "posting_date": ("<=", posting_date)},
 		fields=["advance_amount", "paid_amount"],
 	)
-	return sum([(emp.advance_amount - emp.paid_amount) for emp in employee_due_amount])
+	return sum(emp.advance_amount - emp.paid_amount for emp in employee_due_amount)
 
 
 @frappe.whitelist()
@@ -170,7 +170,7 @@ def make_bank_entry(dt, dn):
 	je.posting_date = nowdate()
 	je.voucher_type = "Bank Entry"
 	je.company = doc.company
-	je.remark = "Payment against Employee Advance: " + dn + "\n" + doc.purpose
+	je.remark = f"Payment against Employee Advance: {dn}" + "\n" + doc.purpose
 	je.multi_currency = 1 if advance_account_currency != payment_account.account_currency else 0
 
 	je.append(
@@ -267,7 +267,7 @@ def make_return_entry(
 	je.posting_date = nowdate()
 	je.voucher_type = get_voucher_type(mode_of_payment)
 	je.company = company
-	je.remark = "Return against Employee Advance: " + employee_advance_name
+	je.remark = f"Return against Employee Advance: {employee_advance_name}"
 	je.multi_currency = 1 if advance_account_currency != bank_cash_account.account_currency else 0
 
 	advance_account_amount = (

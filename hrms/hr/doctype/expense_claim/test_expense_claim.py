@@ -287,14 +287,14 @@ class TestExpenseClaim(FrappeTestCase):
 
 		self.assertTrue(gl_entries)
 
-		expected_values = dict(
-			(d[0], d)
+		expected_values = {
+			d[0]: d
 			for d in [
 				["Output Tax CGST - _TC3", 18.0, 0.0],
 				[payable_account, 0.0, 218.0],
 				["Travel Expenses - _TC3", 200.0, 0.0],
 			]
-		)
+		}
 
 		for gle in gl_entries:
 			self.assertEqual(expected_values[gle.account][0], gle.account)
@@ -465,8 +465,8 @@ def make_expense_claim(
 
 	if not employee:
 		employee = frappe.db.get_value("Employee", {"status": "Active", "company": company})
-		if not employee:
-			employee = make_employee("test_employee@expenseclaim.com", company=company)
+	if not employee:
+		employee = make_employee("test_employee@expenseclaim.com", company=company)
 
 	currency, cost_center = frappe.db.get_value(
 		"Company", company, ["default_currency", "cost_center"]
@@ -490,7 +490,7 @@ def make_expense_claim(
 		],
 	}
 	if taxes:
-		expense_claim.update(taxes)
+		expense_claim |= taxes
 
 	expense_claim = frappe.get_doc(expense_claim)
 

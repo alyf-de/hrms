@@ -296,7 +296,7 @@ class TestLeaveApplication(unittest.TestCase):
 		self.assertEqual(len(attendance), 3)
 
 		# all on leave
-		self.assertTrue(all([d.status == "On Leave" for d in attendance]))
+		self.assertTrue(all(d.status == "On Leave" for d in attendance))
 
 		# dates
 		dates = [d.attendance_date for d in attendance]
@@ -718,7 +718,7 @@ class TestLeaveApplication(unittest.TestCase):
 		leave_type = "Test Earned Leave Type"
 		make_policy_assignment(employee, leave_type, leave_period)
 
-		for i in range(0, 14):
+		for _ in range(0, 14):
 			allocate_earned_leaves()
 
 		self.assertEqual(get_leave_balance_on(employee.name, leave_type, nowdate()), 6)
@@ -726,7 +726,7 @@ class TestLeaveApplication(unittest.TestCase):
 		# validate earned leaves creation without maximum leaves
 		frappe.db.set_value("Leave Type", leave_type, "max_leaves_allowed", 0)
 
-		for i in range(0, 6):
+		for _ in range(0, 6):
 			allocate_earned_leaves()
 
 		self.assertEqual(get_leave_balance_on(employee.name, leave_type, nowdate()), 9)
@@ -961,7 +961,7 @@ class TestLeaveApplication(unittest.TestCase):
 		allocation.new_leaves_allocated = 2
 		allocation.save()
 
-		for i in range(0, 6):
+		for _ in range(0, 6):
 			allocate_earned_leaves()
 
 		first_sunday = get_first_sunday(self.holiday_list)
@@ -1073,8 +1073,9 @@ def set_leave_approver():
 
 
 def get_leave_period():
-	leave_period_name = frappe.db.get_value("Leave Period", {"company": "_Test Company"})
-	if leave_period_name:
+	if leave_period_name := frappe.db.get_value(
+		"Leave Period", {"company": "_Test Company"}
+	):
 		return frappe.get_doc("Leave Period", leave_period_name)
 	else:
 		return frappe.get_doc(
@@ -1134,7 +1135,6 @@ def make_policy_assignment(employee, leave_type, leave_period):
 		"leave_period": leave_period.name,
 	}
 
-	leave_policy_assignments = create_assignment_for_multiple_employees(
+	return create_assignment_for_multiple_employees(
 		[employee.name], frappe._dict(data)
 	)
-	return leave_policy_assignments

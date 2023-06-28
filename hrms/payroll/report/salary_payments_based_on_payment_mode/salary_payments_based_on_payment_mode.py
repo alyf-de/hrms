@@ -34,21 +34,26 @@ def get_columns(filters, mode_of_payments):
 		}
 	]
 
-	for mode in mode_of_payments:
-		columns.append({"label": _(mode), "fieldname": mode, "fieldtype": "Currency", "width": 160})
-
+	columns.extend(
+		{
+			"label": _(mode),
+			"fieldname": mode,
+			"fieldtype": "Currency",
+			"width": 160,
+		}
+		for mode in mode_of_payments
+	)
 	columns.append({"label": _("Total"), "fieldname": "total", "fieldtype": "Currency", "width": 140})
 
 	return columns
 
 
 def get_payment_modes():
-	mode_of_payments = frappe.db.sql_list(
+	return frappe.db.sql_list(
 		"""
 		select distinct mode_of_payment from `tabSalary Slip` where docstatus = 1
 	"""
 	)
-	return mode_of_payments
 
 
 def prepare_data(entry):
@@ -110,8 +115,7 @@ def get_data(filters, mode_of_payments):
 	report_summary = []
 
 	if data:
-		data.append(total_row)
-		data.append({})
+		data.extend((total_row, {}))
 		data.append({"branch": "<b>Total Gross Pay</b>", mode_of_payments[0]: gross_pay})
 		data.append({"branch": "<b>Total Deductions</b>", mode_of_payments[0]: total_deductions})
 		data.append({"branch": "<b>Total Net Pay</b>", mode_of_payments[0]: total_row.get("total")})
@@ -129,7 +133,7 @@ def get_total_based_on_mode_of_payment(data, mode_of_payments):
 	total = 0
 	total_row = {"branch": "<b>Total</b>"}
 	for mode in mode_of_payments:
-		sum_of_payment = sum([detail[mode] for detail in data if mode in detail.keys()])
+		sum_of_payment = sum(detail[mode] for detail in data if mode in detail.keys())
 		total_row[mode] = sum_of_payment
 		total += sum_of_payment
 
@@ -172,8 +176,10 @@ def get_chart(mode_of_payments, data):
 			values.append(data[mode])
 			labels.append([mode])
 
-		chart = {
-			"data": {"labels": labels, "datasets": [{"name": "Mode Of Payments", "values": values}]}
+		return {
+			"data": {
+				"labels": labels,
+				"datasets": [{"name": "Mode Of Payments", "values": values}],
+			},
+			"type": "bar",
 		}
-		chart["type"] = "bar"
-		return chart

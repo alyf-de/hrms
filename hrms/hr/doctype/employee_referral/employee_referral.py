@@ -22,9 +22,8 @@ class EmployeeReferral(Document):
 	def set_referral_bonus_payment_status(self):
 		if not self.is_applicable_for_referral_bonus:
 			self.referral_payment_status = ""
-		else:
-			if not self.referral_payment_status:
-				self.referral_payment_status = "Unpaid"
+		elif not self.referral_payment_status:
+			self.referral_payment_status = "Unpaid"
 
 
 @frappe.whitelist()

@@ -11,8 +11,7 @@ def execute():
 	if not frappe.db.a_row_exists("Leave Ledger Entry"):
 		return
 
-	leave_application_list = get_denied_leave_application_list()
-	if leave_application_list:
+	if leave_application_list := get_denied_leave_application_list():
 		delete_denied_leaves_from_leave_ledger_entry(leave_application_list)
 
 

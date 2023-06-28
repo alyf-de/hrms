@@ -80,7 +80,7 @@ def create_job_offer(**args):
 	if not frappe.db.exists("Designation", args.designation):
 		designation = create_designation(designation_name=args.designation)
 
-	job_offer = frappe.get_doc(
+	return frappe.get_doc(
 		{
 			"doctype": "Job Offer",
 			"job_applicant": args.job_applicant or job_applicant.name,
@@ -89,7 +89,6 @@ def create_job_offer(**args):
 			"status": args.status or "Accepted",
 		}
 	)
-	return job_offer
 
 
 def create_staffing_plan(**args):

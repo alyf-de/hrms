@@ -31,11 +31,8 @@ def get_children(parent=None, company=None, exclude_node=None):
 
 
 def get_connections(employee):
-	num_connections = 0
-
 	nodes_to_expand = frappe.get_list("Employee", filters=[["reports_to", "=", employee]])
-	num_connections += len(nodes_to_expand)
-
+	num_connections = 0 + len(nodes_to_expand)
 	while nodes_to_expand:
 		parent = nodes_to_expand.pop(0)
 		descendants = frappe.get_list("Employee", filters=[["reports_to", "=", parent.name]])

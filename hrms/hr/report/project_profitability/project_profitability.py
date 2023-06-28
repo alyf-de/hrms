@@ -93,8 +93,7 @@ def get_conditions(filters):
 			"`tabTimesheet`.parent_project={0}".format(frappe.db.escape(filters.get("project")))
 		)
 
-	conditions = " and ".join(conditions)
-	return conditions
+	return " and ".join(conditions)
 
 
 def get_chart_data(data):
@@ -108,12 +107,14 @@ def get_chart_data(data):
 		labels.append(entry.get("employee_name") + " - " + str(entry.get("end_date")))
 		utilization.append(entry.get("utilization"))
 
-	charts = {
-		"data": {"labels": labels, "datasets": [{"name": "Utilization", "values": utilization}]},
+	return {
+		"data": {
+			"labels": labels,
+			"datasets": [{"name": "Utilization", "values": utilization}],
+		},
 		"type": "bar",
 		"colors": ["#84BDD5"],
 	}
-	return charts
 
 
 def get_columns():

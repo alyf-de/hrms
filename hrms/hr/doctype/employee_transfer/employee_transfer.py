@@ -70,7 +70,7 @@ class EmployeeTransfer(Document):
 		employee.save()
 
 	def validate_user_in_details(self):
-		for item in self.transfer_details:
-			if item.fieldname == "user_id" and item.new != item.current:
-				return True
-		return False
+		return any(
+			item.fieldname == "user_id" and item.new != item.current
+			for item in self.transfer_details
+		)

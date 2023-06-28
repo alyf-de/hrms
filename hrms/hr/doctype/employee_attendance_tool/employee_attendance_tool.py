@@ -26,12 +26,14 @@ def get_employees(date, department=None, branch=None, company=None):
 	employee_list = frappe.get_list(
 		"Employee", fields=["employee", "employee_name"], filters=filters, order_by="employee_name"
 	)
-	marked_employee = {}
-	for emp in frappe.get_list(
-		"Attendance", fields=["employee", "status"], filters={"attendance_date": date}
-	):
-		marked_employee[emp["employee"]] = emp["status"]
-
+	marked_employee = {
+		emp["employee"]: emp["status"]
+		for emp in frappe.get_list(
+			"Attendance",
+			fields=["employee", "status"],
+			filters={"attendance_date": date},
+		)
+	}
 	for employee in employee_list:
 		employee["status"] = marked_employee.get(employee["employee"])
 		if employee["employee"] not in marked_employee:
@@ -47,11 +49,7 @@ def mark_employee_attendance(employee_list, status, date, leave_type=None, compa
 	employee_list = json.loads(employee_list)
 	for employee in employee_list:
 
-		if status == "On Leave" and leave_type:
-			leave_type = leave_type
-		else:
-			leave_type = None
-
+		leave_type = leave_type if status == "On Leave" and leave_type else None
 		company = frappe.db.get_value("Employee", employee["employee"], "Company", cache=True)
 
 		attendance = frappe.get_doc(
